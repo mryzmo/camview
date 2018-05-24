@@ -1,7 +1,9 @@
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
+import imageio
 import numpy as np
 from scanf import scanf
+import os.path
 #from readimg import sbf, plifimg
 
 class sif:
@@ -89,6 +91,93 @@ class sif:
         #f.close()
         return rs
 
+
+class mptif16:
+    def __init__(self, filename):
+        self.filename = filename
+        self.f=imageio.get_reader(self.filename,'tiff','I')
+        self.subfiles=[self]
+        numfiles=1
+        while True:
+            if os.path.isfile(str(filename).split('.tif')[0]+'_'+str(numfiles-1)+'.tif'):
+                self.subfiles.append(mptif16(str(self.filename).split('.tif')[0]+'_'+str(numfiles-1)+'.tif'))
+                numfiles+=1
+            else:
+                break
+        self.numfiles=numfiles
+        self.imagedata=self.f.get_next_data()
+        # if numfiles>1:
+        #     for s in self.subfiles:
+        #         print(s.numimgframes(onlythis=True))
+        #flagga om subfil
+    def getnumfiles(self):
+        return self.numfiles
+
+    def numimgframes(self,onlythis=False):
+        if self.numfiles==1 or onlythis:
+            return self.f.get_length()
+        else:
+            total=self.f.get_length()
+            for i in range(self.getnumfiles()-2):
+                nextfile=mptif16(str(self.filename).split('.tif')[0]+'_'+str(i)+'.tif')
+                total=total+nextfile.numimgframes(onlythis=True)
+            return total
+
+    def numimgframesperfile(self):
+        if self.numfiles==1:
+            return self.f.get_length()
+        else:
+            total=[]
+            total.append(self.f.get_length())       
+            for i in range(self.getnumfiles()-1):
+                nextfile=mptif16(str(self.filename).split('.tif')[0]+'_'+str(i)+'.tif')
+                total.append(nextfile.numimgframes(onlythis=True))
+            return total
+
+    def getimgdata(self): #returns width,height
+        return np.shape(self.imagedata)
+
+    def whichfile(self,frame):
+        framenums=self.numimgframesperfile()
+        imgfile=0
+        currframe=frame
+        while True:
+            currframe-=framenums[imgfile]
+            if currframe<0:
+                return imgfile,framenums[imgfile]+currframe
+            imgfile+=1
+        return 0
+
+    def readimg(self,startimg=0,stopimg=-1,onlythis=False): 
+        imageDims=self.getimgdata()    
+        if stopimg<0:
+            if onlythis:
+                stopimg=self.numimgframes(onlythis=True)
+            else:
+                 stopimg=self.numimgframes()
+        
+        if self.numfiles>1 and not onlythis: #not a subfile
+            rs=np.empty((imageDims[0],imageDims[1],0),dtype='uint16')
+            startdata=self.whichfile(startimg)
+            stopdata=self.whichfile(stopimg)
+            globalindex=startimg
+            currentfile=startdata[0]
+            localstartindex=startdata[1]
+            while currentfile<stopdata[0]:
+                rs=np.append(rs,self.subfiles[currentfile].readimg(localstartindex,-1,True),2)
+                localstartindex=0
+                currentfile+=1
+            if currentfile==stopdata[0]:
+                rs=np.append(rs,self.subfiles[currentfile].readimg(localstartindex,stopdata[1],True),2)
+        else:
+            self.f.set_image_index(startimg)
+            rs=np.zeros((imageDims[0],imageDims[1],stopimg-startimg),dtype='uint16')
+            for i in range(stopimg-startimg):
+                rs[:,:,i]=self.f.get_next_data()
+                print('.', end='',flush=True)
+            #f.close()
+        return rs
+
 class sbf:
     def __init__(self, filename):
         self.filename = filename
@@ -131,6 +220,8 @@ class sbf:
 
 class plifimg:
     def readimgav(img,startimg=0,stopimg=-1,numavg=10):
+        print('test')
+        img.readimg(1400,1499)
         if stopimg<0:  #if -1, read to end
             stopimg=img.numimgframes()//2
         if numavg==1: #1 averager = no average
@@ -139,9 +230,10 @@ class plifimg:
         if numavg==-1: #if -1, average all
             numavg=img.numimgframes()//2
         imageDims=img.getimgdata()
-        rs=np.zeros((imageDims[1],imageDims[0],(stopimg-startimg)//numavg),dtype='h')
+        rs=np.zeros((imageDims[0],imageDims[1],(stopimg-startimg)//numavg),dtype='h')
         for i in range((stopimg-startimg)//numavg):
             frame=i*numavg+startimg
+            print('reading '+str(frame)+' to '+str(frame+numavg-1))
             temp=img.readimg(frame,frame+numavg-1)
             rs[:,:,i]=np.mean(temp,axis=2)
         return rs
