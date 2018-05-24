@@ -138,6 +138,8 @@ class mptif16:
         return np.shape(self.imagedata)
 
     def whichfile(self,frame):
+        if self.numfiles==1:
+            return 0
         framenums=self.numimgframesperfile()
         imgfile=0
         currframe=frame
