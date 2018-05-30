@@ -6,7 +6,7 @@ from scanf import scanf
 import os.path
 #from readimg import sbf, plifimg
 
-class sif:
+class sif: #sif files made by the andor software. WIP
     def __init__(self, filename):
         self.filename = filename
 
@@ -92,7 +92,7 @@ class sif:
         return rs
 
 
-class mptif16:
+class mptif16: #support for multipage tifs in several files made by the thorlabs software
     def __init__(self, filename):
         self.filename = filename
         self.f=imageio.get_reader(self.filename,'tiff','I')
@@ -180,7 +180,7 @@ class mptif16:
             #f.close()
         return rs
 
-class sbf:
+class sbf: #files made by the SBF IR camera software
     def __init__(self, filename):
         self.filename = filename
         self.f=open(self.filename,'rb')
