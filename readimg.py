@@ -225,19 +225,19 @@ class plifimg:
         print('test')
         img.readimg(1400,1499)
         if stopimg<0:  #if -1, read to end
-            stopimg=img.numimgframes()//2
+            stopimg=img.numimgframes()
         if numavg==1: #1 averager = no average
             rs=img.readimg(startimg,stopimg)
             return rs
         if numavg==-1: #if -1, average all
-            numavg=img.numimgframes()//2
+            numavg=img.numimgframes()
         imageDims=img.getimgdata()
         rs=np.zeros((imageDims[0],imageDims[1],(stopimg-startimg)//numavg),dtype='h')
         for i in range((stopimg-startimg)//numavg):
             frame=i*numavg+startimg
             print('reading '+str(frame)+' to '+str(frame+numavg-1))
             temp=img.readimg(frame,frame+numavg-1)
-            rs[:,:,i]=np.mean(temp,axis=2)
+            rs[:,:,i]=np.nanmean(temp,axis=2)
         return rs
 
 from pims import FramesSequence, Frame
