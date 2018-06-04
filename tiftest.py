@@ -1,5 +1,6 @@
 from readimg import sif,plifimg,mptif16
 import pyqtgraph as pg
+import ImageViewPfaff
 import numpy as np
 import os.path
 import matplotlib.pyplot as plt
@@ -23,8 +24,8 @@ imagedata=np.swapaxes(plifimg.readimgav(file,0,100,10),0,2)
 # imagedataB=np.roll(np.swapaxes(plifimg.readimgav(fileB,1,500,1),0,2),-2,1)
 # plt.imshow(imagedata[0,:,:])
 # plt.show()
-
-pg.image(imagedata, title="LU SOR Viewer")
+pg.image
+ImageViewPfaff.image(imagedata, title="LU SOR Viewer")
 
 # #pg.image(np.append(imagedata,imagedataB,0), title="LU SXRD Viewer")
 
