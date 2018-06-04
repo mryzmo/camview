@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 #file=mptif16('C:/Users/Catalysis/Pictures/oxtest1.tif')
 #file=mptif16('C:/Users/Catalysis/Desktop/Data/SOR/2018-05-24/sor_4.tif')
 #file=mptif16('E:\Raw_data/2018 LED AAO\Data 180530\Sample4/ox8.tif')
-file=mptif16('E:\sorjonas/ox6.tif')
+file=mptif16('sorjonas/ox6.tif')
 
 print(file.numimgframes())
 print(file.getimgdata())

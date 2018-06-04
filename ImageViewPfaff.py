@@ -9,6 +9,54 @@ from pyqtgraph.widgets.GraphicsView import GraphicsView
 QAPP = None
 
 class ImageViewPfaff(pg.ImageView):
+    def buildMenu(self):
+        super(ImageViewPfaff, self).buildMenu()
+
+        self.trendAction = QtGui.QAction("Trend", self.menu)
+        self.trendAction.setCheckable(True)
+        self.trendAction.toggled.connect(self.trendToggled)
+        self.menu.addAction(self.trendAction)
+
+    def __init__(self, *args):
+        super(ImageViewPfaff, self).__init__(*args)
+        self.trendroi=pg.LineROI([0, 60], [20, 80], width=5)
+        self.trendroi.setZValue(30)
+        self.view.addItem(self.trendroi)
+
+    def trendToggled(self):
+        showRoiPlot = False
+        if self.trendAction.isChecked():
+            print('showing trendroi')
+            showRoiPlot = True
+            self.trendroi.show()
+            #self.ui.roiPlot.show()
+            self.ui.roiPlot.setMouseEnabled(True, True)
+            self.ui.splitter.setSizes([self.height()*0.6, self.height()*0.4])
+            self.roiCurve.show()
+            self.roiChanged()
+            self.ui.roiPlot.showAxis('left')
+        else:
+            self.trendroi.hide()
+            self.ui.roiPlot.setMouseEnabled(False, False)
+            self.roiCurve.hide()
+            self.ui.roiPlot.hideAxis('left')
+            
+        if self.hasTimeAxis():
+            showRoiPlot = True
+            mn = self.tVals.min()
+            mx = self.tVals.max()
+            self.ui.roiPlot.setXRange(mn, mx, padding=0.01)
+            self.timeLine.show()
+            self.timeLine.setBounds([mn, mx])
+            self.ui.roiPlot.show()
+            if not self.trendAction.isChecked():
+                self.ui.splitter.setSizes([self.height()-35, 35])
+        else:
+            self.timeLine.hide()
+            #self.ui.roiPlot.hide()
+            
+        self.ui.roiPlot.setVisible(showRoiPlot)
+
     def normalize(self, image):
             """
             Process *image* using the normalization options configured in the
