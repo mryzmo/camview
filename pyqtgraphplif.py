@@ -72,13 +72,15 @@ class PLIFView(QWidget):
         if len(sys.argv) > 1:
             path = sys.argv[1]
 
+        files = [f for f in listdir(path) if isfile(join(path, f))]
+
         params = [
             {'name': 'Geometry', 'type': 'group', 'children': [
                 {'name': 'SheetTop', 'type': 'int', 'value': 170},
                 {'name': 'SheetBottom', 'type': 'int', 'value': 250},
                 {'name': 'String', 'type': 'str', 'value': "hi"},
                 {'name': 'List', 'type': 'list',
-                    'values': [1, 2, 3], 'value': 2},
+                    'values': files},
                 #{'name': 'Named List', 'type': 'list', 'values': {"one": 1, "two": "twosies", "three": [3,3,3]}, 'value': 2},
                 {'name': 'Autoscale', 'type': 'bool',
                     'value': True, 'tip': "This is a checkbox"},
@@ -95,10 +97,10 @@ class PLIFView(QWidget):
             ]},
             {'name': 'PLIFFile', 'type': 'group', 'children': [
                 {'name': 'Path', 'type': 'str', 'value': path},
-                {'name': 'RealFileName', 'type': 'str',
-                    'value': "20171030_real_.img"},
-                {'name': 'ProfileFileName', 'type': 'str',
-                    'value': "20171030_profile_.img"},
+                {'name': 'RealFileName', 'type': 'list',
+                    'values': files},
+                {'name': 'ProfileFileName', 'type': 'list',
+                    'values': files},
                 {'name': 'ProfileDivision', 'type': 'bool', 'value': True,
                     'tip': "Divide each frame by the profile image"},
                 {'name': 'Invert', 'type': 'bool',
@@ -157,10 +159,10 @@ class PLIFView(QWidget):
 
         def loadFile():
             plifdata = LoadPLIF()
-            self.showData = -plifdata
+            self.showData = plifdata
             if self.p['PLIFFile', 'ProfileDivision']:
                 profiledata = LoadProfile()
-                self.showData = -plifdata/profiledata
+                self.showData=np.true_divide(plifdata,profiledata)
                 self.showData[self.showData < -10] = 20
                 self.showData[self.showData > 20] = -10
             # img.setImage(np.squeeze(divided[:,:,800]))

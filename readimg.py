@@ -15,6 +15,9 @@ class sif: #sif files made by the andor software. WIP
         # Counts12
         # Pixel number65541 1 2160 2560 1 12000 1 1239264000 103272
         # 65538 730 1780 1722 845 3 3 0
+    
+    def imageType(self):
+        return 'AndorSIF'
 
     def getimgdata(self): #returns width,height
         line=''
@@ -112,6 +115,9 @@ class mptif16: #support for multipage tifs in several files made by the thorlabs
         #flagga om subfil
     def getnumfiles(self):
         return self.numfiles
+    
+    def imageType(self):
+        return 'MPTIF'
 
     def numimgframes(self,onlythis=False):
         if self.numfiles==1 or onlythis:
@@ -185,6 +191,9 @@ class sbf: #files made by the SBF IR camera software
         self.filename = filename
         self.f=open(self.filename,'rb')
 
+    def imageType(self):
+        return 'SBF'
+
     def numimgframes(self):
         self.f.seek(42,0)
         return(int.from_bytes(self.f.read(4),byteorder='little'))
@@ -193,7 +202,10 @@ class sbf: #files made by the SBF IR camera software
         return (256,256)
 
     def readimg(self,startimg=0,stopimg=-1):
-        #f=open(self.filename,'rb')
+        if startimg > self.numimgframes():
+            return np.zeros((256,256),dtype='h')
+        if stopimg > self.numimgframes():
+            stopimg=stopimg=self.numimgframes()//2
         f=self.f
         if stopimg<0:
             stopimg=self.numimgframes()//2
@@ -222,17 +234,21 @@ class sbf: #files made by the SBF IR camera software
 
 class plifimg:
     def readimgav(img,startimg=0,stopimg=-1,numavg=10):
-        print('test')
-        img.readimg(1400,1499)
+        print('Starting average read...')
+        #img.readimg(1400,1499)
         if stopimg<0:  #if -1, read to end
             stopimg=img.numimgframes()
+            if img.imageType()=='SBF':
+                stopimg=img.numimgframes()//2
         if numavg==1: #1 averager = no average
             rs=img.readimg(startimg,stopimg)
             return rs
         if numavg==-1: #if -1, average all
             numavg=img.numimgframes()
+            if img.imageType()=='SBF':
+                numavg=img.numimgframes()//2
         imageDims=img.getimgdata()
-        rs=np.zeros((imageDims[0],imageDims[1],(stopimg-startimg)//numavg),dtype='h')
+        rs=np.zeros((imageDims[0],imageDims[1],(stopimg-startimg)//numavg),dtype='float64')
         for i in range((stopimg-startimg)//numavg):
             frame=i*numavg+startimg
             print('reading '+str(frame)+' to '+str(frame+numavg-1))
