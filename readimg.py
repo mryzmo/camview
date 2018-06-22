@@ -201,6 +201,24 @@ class sbf: #files made by the SBF IR camera software
     def getimgdata(self): #returns width,height
         return (256,256)
 
+    def readraw(self,startimg=0,stopimg=1):
+        if startimg > self.numimgframes():
+            return np.zeros((256,256),dtype='h')
+        if stopimg > self.numimgframes():
+            stopimg=stopimg=self.numimgframes()
+        f=self.f
+        if stopimg<0:
+            stopimg=self.numimgframes()
+        #f.seek(512,0)
+        f.seek(512+65536*2*startimg,0)
+        rs=np.zeros((256,256,stopimg-startimg),dtype='h')
+        for i in range(stopimg-startimg):
+            image=f.read(65536*2)
+            imdb=np.frombuffer(image,dtype='h')
+            rs[:,:,i]=np.reshape(imdb,(256,256))
+        #f.close()
+        return rs
+
     def readimg(self,startimg=0,stopimg=-1):
         if startimg > self.numimgframes():
             return np.zeros((256,256),dtype='h')

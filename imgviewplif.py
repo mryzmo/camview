@@ -1018,7 +1018,7 @@ def cmapToColormap(cmap, nTicks=16):
         raise ValueError("[cmapToColormap] Unknown cmap format or not a cmap!")
 
 
-class MplCmapImageViewPLIF(ImageViewPLIF):
+class MplCmapImageViewPLIF(ImageViewPfaff):
     def __init__(self, additionalCmaps=[], setColormap=None, **kargs):
         super(MplCmapImageViewPLIF, self).__init__(**kargs)
 

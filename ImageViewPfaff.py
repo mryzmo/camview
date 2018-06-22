@@ -5,7 +5,10 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from pyqtgraph.widgets.PlotWidget import *
 from pyqtgraph.imageview import *
 from pyqtgraph.widgets.GraphicsLayoutWidget import GraphicsLayoutWidget
+from pyqtgraph.graphicsItems.GradientEditorItem import addGradientListToDocstring
 from pyqtgraph.widgets.GraphicsView import GraphicsView
+import matplotlib.cm
+import collections
 QAPP = None
 
 class ImageViewPfaff(pg.ImageView):
@@ -17,11 +20,84 @@ class ImageViewPfaff(pg.ImageView):
         self.trendAction.toggled.connect(self.trendToggled)
         self.menu.addAction(self.trendAction)
 
-    def __init__(self, *args):
-        super(ImageViewPfaff, self).__init__(*args)
+    def __init__(self,additionalCmaps=[], setColormap=None, **kargs):
+        super(ImageViewPfaff, self).__init__(**kargs)
         self.trendroi=pg.LineROI([0, 60], [20, 80], width=5)
         self.trendroi.setZValue(30)
         self.view.addItem(self.trendroi)
+        self.trendroi.hide()
+        
+        self.gradientEditorItem = self.ui.histogram.item.gradient
+
+        self.activeCm = "grey"
+        self.mplCmaps = {}
+
+        if len(additionalCmaps) > 0:
+            self.registerCmap(additionalCmaps)
+
+        if setColormap is not None:
+            self.gradientEditorItem.restoreState(setColormap)
+
+    def registerCmap(self, cmapNames):
+        """ Add matplotlib cmaps to the GradientEditors context menu"""
+        self.gradientEditorItem.menu.addSeparator()
+        savedLength = self.gradientEditorItem.length
+        self.gradientEditorItem.length = 100
+
+        # iterate over the list of cmap names and check if they're avaible in MPL
+        for cmapName in cmapNames:
+            if not hasattr(matplotlib.cm, cmapName):
+                print('[MplCmapImageView] Unknown cmap name: \'{}\'. Your Matplotlib installation might be outdated.'.format(cmapName))
+            else:
+                # create a Dictionary just as the one at the top of GradientEditorItem.py
+                cmap = getattr(matplotlib.cm, cmapName)
+                self.mplCmaps[cmapName] = {'ticks': cmapToColormap(cmap), 'mode': 'rgb'}
+
+                # Create the menu entries
+                # The following code is copied from pyqtgraph.ImageView.__init__() ...
+                px = QtGui.QPixmap(100, 15)
+                p = QtGui.QPainter(px)
+                self.gradientEditorItem.restoreState(self.mplCmaps[cmapName])
+                grad = self.gradientEditorItem.getGradient()
+                brush = QtGui.QBrush(grad)
+                p.fillRect(QtCore.QRect(0, 0, 100, 15), brush)
+                p.end()
+                label = QtGui.QLabel()
+                label.setPixmap(px)
+                label.setContentsMargins(1, 1, 1, 1)
+                act = QtGui.QWidgetAction(self.gradientEditorItem)
+                act.setDefaultWidget(label)
+                act.triggered.connect(self.cmapClicked)
+                act.name = cmapName
+                self.gradientEditorItem.menu.addAction(act)
+        self.gradientEditorItem.length = savedLength
+
+
+    def cmapClicked(self, b=None):
+        """onclick handler for our custom entries in the GradientEditorItem's context menu"""
+        act = self.sender()
+        self.gradientEditorItem.restoreState(self.mplCmaps[act.name])
+        self.activeCm = act.name
+
+    def setColorMap(self, colormap):
+        """Set the color map.
+
+        ============= =========================================================
+        **Arguments**
+        colormap      (A ColorMap() instance) The ColorMap to use for coloring
+                      images.
+        ============= =========================================================
+        """
+        self.ui.histogram.gradient.setColorMap(colormap)
+
+
+    @addGradientListToDocstring()
+
+    def setPredefinedGradient(self, name):
+        """Set one of the gradients defined in :class:`GradientEditorItem <pyqtgraph.graphicsItems.GradientEditorItem>`.
+        Currently available gradients are:
+        """
+        self.ui.histogram.gradient.loadPreset(name)
 
     def trendToggled(self):
         showRoiPlot = False
@@ -134,6 +210,82 @@ class ImageWindow(ImageViewPfaff):
         #for m in ['setImage', 'autoRange', 'addItem', 'removeItem', 'blackLevel', 'whiteLevel', 'imageItem']:
             #setattr(self, m, getattr(self.cw, m))
         self.win.show()
+
+
+def cmapToColormap(cmap, nTicks=16):
+    """
+    Converts a Matplotlib cmap to pyqtgraphs colormaps. No dependency on matplotlib.
+    Parameters:
+    *cmap*: Cmap object. Imported from matplotlib.cm.*
+    *nTicks*: Number of ticks to create when dict of functions is used. Otherwise unused.
+    """
+
+    # Case #1: a dictionary with 'red'/'green'/'blue' values as list of ranges (e.g. 'jet')
+    # The parameter 'cmap' is a 'matplotlib.colors.LinearSegmentedColormap' instance ...
+    if hasattr(cmap, '_segmentdata'):
+        colordata = getattr(cmap, '_segmentdata')
+        if ('red' in colordata) and isinstance(colordata['red'], collections.Sequence):
+            # print("[cmapToColormap] RGB dicts with ranges")
+
+            # collect the color ranges from all channels into one dict to get unique indices
+            posDict = {}
+            for idx, channel in enumerate(('red', 'green', 'blue')):
+                for colorRange in colordata[channel]:
+                    posDict.setdefault(colorRange[0], [-1, -1, -1])[idx] = colorRange[2]
+
+            indexList = list(posDict.keys())
+            indexList.sort()
+            # interpolate missing values (== -1)
+            for channel in range(3):  # R,G,B
+                startIdx = indexList[0]
+                emptyIdx = []
+                for curIdx in indexList:
+                    if posDict[curIdx][channel] == -1:
+                        emptyIdx.append(curIdx)
+                    elif curIdx != indexList[0]:
+                        for eIdx in emptyIdx:
+                            rPos = (eIdx - startIdx) / (curIdx - startIdx)
+                            vStart = posDict[startIdx][channel]
+                            vRange = (posDict[curIdx][channel] - posDict[startIdx][channel])
+                            posDict[eIdx][channel] = rPos * vRange + vStart
+                        startIdx = curIdx
+                        del emptyIdx[:]
+            for channel in range(3):  # R,G,B
+                for curIdx in indexList:
+                    posDict[curIdx][channel] *= 255
+
+            posList = [[i, posDict[i]] for i in indexList]
+            return posList
+
+        # Case #2: a dictionary with 'red'/'green'/'blue' values as functions (e.g. 'gnuplot')
+        elif ('red' in colordata) and isinstance(colordata['red'], collections.Callable):
+            # print("[cmapToColormap] RGB dict with functions")
+            indices = np.linspace(0., 1., nTicks)
+            luts = [np.clip(np.array(colordata[rgb](indices), dtype=np.float), 0, 1) * 255 \
+                    for rgb in ('red', 'green', 'blue')]
+            return list(zip(indices, list(zip(*luts))))
+
+    # If the parameter 'cmap' is a 'matplotlib.colors.ListedColormap' instance, with the attributes 'colors' and 'N'
+    elif hasattr(cmap, 'colors') and hasattr(cmap, 'N'):
+        colordata = getattr(cmap, 'colors')
+        # Case #3: a list with RGB values (e.g. 'seismic')
+        if len(colordata[0]) == 3:
+            # print("[cmapToColormap] list with RGB values")
+            indices = np.linspace(0., 1., len(colordata))
+            scaledRgbTuples = [(rgbTuple[0] * 255, rgbTuple[1] * 255, rgbTuple[2] * 255) for rgbTuple in colordata]
+            return list(zip(indices, scaledRgbTuples))
+
+        # Case #4: a list of tuples with positions and RGB-values (e.g. 'terrain')
+        # -> this section is probably not needed anymore!?
+        elif len(colordata[0]) == 2:
+            # print("[cmapToColormap] list with positions and RGB-values. Just scale the values.")
+            scaledCmap = [(idx, (vals[0] * 255, vals[1] * 255, vals[2] * 255)) for idx, vals in colordata]
+            return scaledCmap
+
+    # Case #X: unknown format or datatype was the wrong object type
+    else:
+        raise ValueError("[cmapToColormap] Unknown cmap format or not a cmap!")
+
 images = []
 def image(*args, **kargs):
     """
