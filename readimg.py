@@ -1,5 +1,4 @@
-import matplotlib.pyplot as plt
-import matplotlib.image as mpimg
+#!/usr/bin/env python3
 import imageio
 import numpy as np
 from scanf import scanf
@@ -15,7 +14,7 @@ class sif: #sif files made by the andor software. WIP
         # Counts12
         # Pixel number65541 1 2160 2560 1 12000 1 1239264000 103272
         # 65538 730 1780 1722 845 3 3 0
-    
+
     def imageType(self):
         return 'AndorSIF'
 
@@ -115,7 +114,7 @@ class mptif16: #support for multipage tifs in several files made by the thorlabs
         #flagga om subfil
     def getnumfiles(self):
         return self.numfiles
-    
+
     def imageType(self):
         return 'MPTIF'
 
@@ -134,7 +133,7 @@ class mptif16: #support for multipage tifs in several files made by the thorlabs
             return self.f.get_length()
         else:
             total=[]
-            total.append(self.f.get_length())       
+            total.append(self.f.get_length())
             for i in range(self.getnumfiles()-1):
                 nextfile=mptif16(str(self.filename).split('.tif')[0]+'_'+str(i)+'.tif')
                 total.append(nextfile.numimgframes(onlythis=True))
@@ -156,14 +155,14 @@ class mptif16: #support for multipage tifs in several files made by the thorlabs
             imgfile+=1
         return 0
 
-    def readimg(self,startimg=0,stopimg=-1,onlythis=False): 
-        imageDims=self.getimgdata()    
+    def readimg(self,startimg=0,stopimg=-1,onlythis=False):
+        imageDims=self.getimgdata()
         if stopimg<0:
             if onlythis:
                 stopimg=self.numimgframes(onlythis=True)
             else:
                  stopimg=self.numimgframes()
-        
+
         if self.numfiles>1 and not onlythis: #not a subfile
             rs=np.empty((imageDims[0],imageDims[1],0),dtype='uint16')
             startdata=self.whichfile(startimg)
@@ -252,8 +251,6 @@ class sbf: #files made by the SBF IR camera software
 
 class plifimg:
     def readimgav(img,startimg=0,stopimg=-1,numavg=10):
-        print('Starting average read...')
-        #img.readimg(1400,1499)
         if stopimg<0:  #if -1, read to end
             stopimg=img.numimgframes()
             if img.imageType()=='SBF':
@@ -266,7 +263,7 @@ class plifimg:
             if img.imageType()=='SBF':
                 numavg=img.numimgframes()//2
         imageDims=img.getimgdata()
-        rs=np.zeros((imageDims[0],imageDims[1],(stopimg-startimg)//numavg),dtype='float64')
+        rs=np.zeros((imageDims[1],imageDims[0],(stopimg-startimg)//numavg),dtype='float64')
         for i in range((stopimg-startimg)//numavg):
             frame=i*numavg+startimg
             print('reading '+str(frame)+' to '+str(frame+numavg-1))
@@ -311,16 +308,3 @@ class SBFReader(FramesSequence):
     @classmethod
     def class_exts(self):
         return {'img'} | super().class_exts()
-
-
-#sbfi=sbf('/home/sebastian/Documents/Data/20171029_real_14.img')
-#
-#rs=plifimg.readimgav(sbfi,11000)
-#
-#
-##rs=sbfi.readimgav(11000)
-##rs=readimgav('/home/sebastian/Documents/Data/20171029_real_14.img',11000,-1,10)
-#plt.imshow(rs[:,:,1])
-#plt.colorbar()
-#print(numimgframes('/home/sebastian/Documents/Data/20171029_real_14.img'))
-    #print(f.read(65536))

@@ -23,6 +23,7 @@ import matplotlib.image as mpimg
 from os import listdir
 from os.path import isfile, join
 from readimg import sbf, plifimg
+from readlvfile import readlvfile
 from ImageViewPfaff import ImageViewPfaff
 import pickle
 
@@ -79,8 +80,6 @@ class PLIFView(QWidget):
                 {'name': 'SheetTop', 'type': 'int', 'value': 0},
                 {'name': 'SheetBottom', 'type': 'int', 'value': 250},
                 {'name': 'String', 'type': 'str', 'value': "hi"},
-                {'name': 'List', 'type': 'list',
-                    'values': files},
                 #{'name': 'Named List', 'type': 'list', 'values': {"one": 1, "two": "twosies", "three": [3,3,3]}, 'value': 2},
                 {'name': 'Autoscale', 'type': 'bool',
                     'value': True, 'tip': "This is a checkbox"},
@@ -90,6 +89,8 @@ class PLIFView(QWidget):
                     'value': 0},
                 {'name': 'CatalystSize', 'type': 'float', 'value': 10e-3,
                     'step': 1e-3, 'siPrefix': True, 'suffix': 'm'},
+                {'name': 'DistPerPx', 'type': 'float', 'value': 80e-6, 'step': 1e-8,
+                    'siPrefix': True, 'suffix': 'm/px'},
                 #{'name': 'Color', 'type': 'color', 'value': "FF0", 'tip': "This is a color button"},
                 #{'name': 'Gradient', 'type': 'colormap'},
                 #{'name': 'Subgroup', 'type': 'group', 'children': [
@@ -105,6 +106,8 @@ class PLIFView(QWidget):
                     'values': files},
                 {'name': 'ProfileFileName', 'type': 'list',
                     'values': files},
+                {'name': 'LVFileName', 'type': 'list',
+                    'values': files},
                 {'name': 'ProfileDivision', 'type': 'bool', 'value': True,
                     'tip': "Divide each frame by the profile image"},
                 {'name': 'ReadRaw', 'type': 'bool', 'value': False,
@@ -117,6 +120,7 @@ class PLIFView(QWidget):
                 {'name': 'NumAverage', 'type': 'int', 'value': 10},
                 #{'name': 'PLIFCode', 'type': 'text', 'value': ''},
                 {'name': 'LoadFile', 'type': 'action'},
+                {'name': 'LoadLVFile', 'type': 'action'},
                 #{'name': 'Units + SI prefix', 'type': 'float', 'value': 1.2e-6, 'step': 1e-6, 'siPrefix': True, 'suffix': 'V'},
                 #{'name': 'Limits (min=7;max=15)', 'type': 'int', 'value': 11, 'limits': (7, 15), 'default': -6},
                 #{'name': 'DEC stepping', 'type': 'float', 'value': 1.2e6, 'dec': True, 'step': 1, 'siPrefix': True, 'suffix': 'Hz'},
@@ -147,6 +151,50 @@ class PLIFView(QWidget):
         # self.p['PLIFFile','PLIFCode']='plifdata=LoadPLIF()\nprofiledata=LoadProfile()\nshowdata=-plifdata/profiledata'
 
 # viewbox setLimits
+
+        def LVtimeLineChanged(self):
+            (ind, time) = img.timeIndex(self)
+            img.setCurrentIndex(ind)
+
+        
+        def AddLV():
+            timeline,unitline,times,temps,currents,pressures,flows,msdata=readlvfile(self.p['PLIFFile', 'LVFileName'])
+            #plot(times,temps,times,currents*1000)
+            pens=['r','b','g','y','c']
+            win = pg.GraphicsWindow(title="Measurement Parameters")
+            win.resize(1000,600)
+            win.setWindowTitle('Labview Reader')
+            p1 = win.addPlot(title="Heating")
+            p1.addLegend()
+            p1.plot(times,temps,pen=(0,255,0),name='Temperature [°C]')
+            p1.plot(times,currents*1000,pen=(255,0,0),name='Current [mA]')
+            p1.setLabel('bottom',text='time',units='s')
+            win.nextRow()
+            p2 = win.addPlot(title="Flows")
+            for i in range(0,5):
+                p2.plot(times,flows[:,i],pen=pens[i])
+            p2.setXLink(p1)
+            win.nextRow()
+            p3 = win.addPlot(title="MS")
+            for i in range(0,5):
+                p3.plot(times,np.log10(msdata[:,i]),pen=pens[i])
+            p2.setXLink(p1)
+            self.LVtimeLine = pg.InfiniteLine(0, movable=True)
+            self.LVtimeLine2 = pg.InfiniteLine(0, movable=True)
+            self.LVtimeLine3 = pg.InfiniteLine(0, movable=True)
+            p1.addItem(self.LVtimeLine)
+            p2.addItem(self.LVtimeLine2)
+            p3.addItem(self.LVtimeLine3)
+            self.LVtimeLine.sigPositionChanged.connect(LVtimeLineChanged)
+            self.LVtimeLine2.sigPositionChanged.connect(LVtimeLineChanged)
+            self.LVtimeLine3.sigPositionChanged.connect(LVtimeLineChanged)
+            QtGui.QApplication.instance().exec_()
+
+
+        def getNumFrames():
+            file = sbf(self.p.child('PLIFFile', 'Path').value() +
+                       '/'+self.p.child('PLIFFile', 'RealFileName').value())
+            return file.numimgframes()
 
         def LoadPLIF():
             file = sbf(self.p.child('PLIFFile', 'Path').value() +
@@ -190,6 +238,8 @@ class PLIFView(QWidget):
                     redrawSheet()
                 if childName == 'LoadFile':
                     loadFile()
+                if childName == 'LoadLVFile':
+                    AddLV()
                 if childName == 'Save':
                     save()
                 if childName == 'Restore':
@@ -217,10 +267,14 @@ class PLIFView(QWidget):
                 invfactor = -1
             else:
                 invfactor = 1
+            if self.p.child('PLIFFile', 'EndFrame').value()==-1:
+                endframe=getNumFrames()//2
+            else:
+                endframe=self.p.child('PLIFFile', 'EndFrame').value()
             img.setImage(invfactor*self.showData[:, :, top:bottom],
                          autoHistogramRange=False,
-                         xvals=np.linspace(self.p.child('PLIFFile', 'BeginFrame').value(),
-                                           self.p.child('PLIFFile', 'EndFrame').value(), self.showData.shape[0]))
+                         xvals=np.linspace(self.p.child('PLIFFile', 'BeginFrame').value()/10,
+                                           endframe/10, self.showData.shape[0]))
             hist = img.getHistogramWidget()
             hist.setLevels(self.p['Geometry', 'ColorMapMin'], self.p['Geometry', 'ColorMapMax'])
         # self.p.child('Geometry','SheetTop').sigValueChanging.connect(redrawSheet)
