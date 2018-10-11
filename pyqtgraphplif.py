@@ -40,42 +40,21 @@ class PLIFView(QWidget):
         self.status = QStatusBar(self)
         self.statusProgress = QProgressBar()
         self.status.addWidget(self.statusProgress)
-        # pg.setConfigOptions(imageAxisOrder='row-major')
-        # self.figure=Figure()
-        # self.canvas=FigureCanvas(self.figure)
-        # self.ax=self.figure.add_subplot(111)
-        #self.toolbar = NavigationToolbar(self.canvas, self)
-        # gl=QVBoxLayout(self)
-        hlayout = QHBoxLayout(self)
-        # btn.resize(btn.sizeHint())
-        # btn.clicked.connect(self.plotsa)
-        # print(QStyleFactory.keys())
-        # glbottom.addWidget(btn)
-        # self.pgwidget=pg.GraphicsLayoutWidget()
 
-        # self.pathline=QLineEdit()
-        # self.pathline.setText('.')
-        # gl.addWidget(btn)
-        #p1 = self.pgwidget.addPlot()
+        hlayout = QHBoxLayout(self)
+
         img = ImageViewPfaff(
             view=pg.PlotItem(), additionalCmaps=['viridis', 'jet'])
-        # p1.addItem(img)
-        #hist = pg.HistogramLUTItem()
-        # hist.setImageItem(img)
+
         hlayout.addWidget(img)
-        # self.pgwidget.addItem(hist)
-        # self.pgwidget.nextRow()
-        #p2 = self.pgwidget.addPlot(colspan=2)
-        # p2.setMaximumHeight(250)
-        #self.pgwidget.resize(1200, 800)
-        # win.show()
-        path = '.'
+        path = '/home/sebastian/Documents/Data/PdDiamond'
         if len(sys.argv) > 1:
             path = sys.argv[1]
 
-        files = [f for f in listdir(path) if isfile(join(path, f)) and '.val' not in str(f)]
+        def initPanel(self):
+            files = [f for f in listdir(path) if isfile(join(path, f)) and '.val' not in str(f)]
 
-        params = [
+            params = [
             {'name': 'Geometry', 'type': 'group', 'children': [
                 {'name': 'SheetTop', 'type': 'int', 'value': 0},
                 {'name': 'SheetBottom', 'type': 'int', 'value': 250},
@@ -108,6 +87,7 @@ class PLIFView(QWidget):
                     'values': files},
                 {'name': 'LVFileName', 'type': 'list',
                     'values': files},
+                {'name': 'Refresh', 'type': 'action'},
                 {'name': 'ProfileDivision', 'type': 'bool', 'value': True,
                     'tip': "Divide each frame by the profile image"},
                 {'name': 'ReadRaw', 'type': 'bool', 'value': False,
@@ -131,31 +111,30 @@ class PLIFView(QWidget):
                     {'name': 'Add missing items', 'type': 'bool', 'value': True},
                     {'name': 'Remove extra items', 'type': 'bool', 'value': True},
                 ]},
-            ]},
-            {'name': 'Extra Parameter Options', 'type': 'group', 'children': [
-                {'name': 'Read-only', 'type': 'float', 'value': 1.2e6,
-                    'siPrefix': True, 'suffix': 'Hz', 'readonly': True},
-                {'name': 'Renamable', 'type': 'float', 'value': 1.2e6,
-                    'siPrefix': True, 'suffix': 'Hz', 'renamable': True},
-                {'name': 'Removable', 'type': 'float', 'value': 1.2e6,
-                    'siPrefix': True, 'suffix': 'Hz', 'removable': True},
             ]}
+            #{'name': 'Extra Parameter Options', 'type': 'group', 'children': [
+            #    {'name': 'Read-only', 'type': 'float', 'value': 1.2e6,
+            #        'siPrefix': True, 'suffix': 'Hz', 'readonly': True},
+            #    {'name': 'Renamable', 'type': 'float', 'value': 1.2e6,
+            #        'siPrefix': True, 'suffix': 'Hz', 'renamable': True},
+            #    {'name': 'Removable', 'type': 'float', 'value': 1.2e6,
+            #        'siPrefix': True, 'suffix': 'Hz', 'removable': True},
+            #]}
             # ComplexParameter(name='Custom parameter group (reciprocal values)'),
             # ScalableGroup(name="Expandable Parameter Group", children=[
             #     {'name': 'ScalableParam 1', 'type': 'str', 'value': "default param 1"},
             #     {'name': 'ScalableParam 2', 'type': 'str', 'value': "default param 2"},
             # ]),
-        ]
-        self.p = Parameter.create(name='params', type='group', children=params)
-        t = ParameterTree()
-        # self.p['PLIFFile','PLIFCode']='plifdata=LoadPLIF()\nprofiledata=LoadProfile()\nshowdata=-plifdata/profiledata'
-
-# viewbox setLimits
+            ]
+            self.p = Parameter.create(name='params', type='group', children=params)
+            self.t = ParameterTree()
+            self.p.sigTreeStateChanged.connect(change)
+            self.t.setParameters(self.p, showTop=False)
+            self.t.setMaximumSize(400, 30000)
 
         def LVtimeLineChanged(self):
             (ind, time) = img.timeIndex(self)
             img.setCurrentIndex(ind)
-
         
         def AddLV():
             timeline,unitline,times,temps,currents,pressures,flows,msdata=readlvfile(self.p['PLIFFile', 'LVFileName'])
@@ -189,7 +168,6 @@ class PLIFView(QWidget):
             self.LVtimeLine2.sigPositionChanged.connect(LVtimeLineChanged)
             self.LVtimeLine3.sigPositionChanged.connect(LVtimeLineChanged)
             QtGui.QApplication.instance().exec_()
-
 
         def getNumFrames():
             file = sbf(self.p.child('PLIFFile', 'Path').value() +
@@ -246,6 +224,10 @@ class PLIFView(QWidget):
                     restore()
                 if childName == 'ForceRedraw':
                     redrawSheet()
+                if childName == 'Refresh':
+                    hlayout.removeWidget(self.t)
+                    initPanel(self)
+                    hlayout.addWidget(self.t)
 
         def save():
             global state
@@ -279,13 +261,10 @@ class PLIFView(QWidget):
             hist.setLevels(self.p['Geometry', 'ColorMapMin'], self.p['Geometry', 'ColorMapMax'])
         # self.p.child('Geometry','SheetTop').sigValueChanging.connect(redrawSheet)
         # self.p.child('Geometry','SheetBottom').sigValueChanging.connect(redrawSheet)
-
+        initPanel(self)
+        hlayout.addWidget(self.t)
         # restore()
-        self.p.sigTreeStateChanged.connect(change)
-        t.setParameters(self.p, showTop=False)
-        t.setMaximumSize(400, 30000)
 
-        hlayout.addWidget(t)
 
         self.show()
 

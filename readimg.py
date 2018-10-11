@@ -251,11 +251,13 @@ class sbf: #files made by the SBF IR camera software
 
 class plifimg:
     def readimgav(img,startimg=0,stopimg=-1,numavg=10):
-        if stopimg<0:  #if -1, read to end
+        if stopimg<0 or \
+         (img.imageType()=='SBF' and stopimg>img.numimgframes()//2) or \
+         stopimg>img.numimgframes():  #if -1, read to end
             stopimg=img.numimgframes()
             if img.imageType()=='SBF':
                 stopimg=img.numimgframes()//2
-        if numavg==1: #1 averager = no average
+        if numavg==1: #1 average one = no average
             rs=img.readimg(startimg,stopimg)
             return rs
         if numavg==-1: #if -1, average all

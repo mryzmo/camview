@@ -23,7 +23,7 @@ imagedata=np.swapaxes(plifimg.readimgav(file,0,-1,10),0,2)
 # imagedataB=np.roll(np.swapaxes(plifimg.readimgav(fileB,1,500,1),0,2),-2,1)
 # plt.imshow(imagedata[0,:,:])
 # plt.show()
-pg.image
+
 ImageViewPfaff.image(imagedata, title="LU SOR Viewer")
 
 # #pg.image(np.append(imagedata,imagedataB,0), title="LU SXRD Viewer")

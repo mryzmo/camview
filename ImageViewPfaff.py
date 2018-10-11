@@ -188,6 +188,37 @@ class ImageViewPfaff(pg.ImageView):
                     
             return norm
 
+    def quickMinMax(self, data):
+        """
+        Estimate the min/max values of *data* by subsampling.
+        """
+        while data.size > 1e6:
+            ax = np.argmax(data.shape)
+            sl = [slice(None)] * data.ndim
+            sl[ax] = slice(None, None, 2)
+            data = data[sl]
+            data[~np.isfinite(data)] = np.nan
+        return np.nanmin(data), np.nanmax(data)    
+
+    # def updateNorm(self):
+    #     if self.ui.normTimeRangeCheck.isChecked():
+    #         self.normRgn.show()
+    #     else:
+    #         self.normRgn.hide()
+        
+    #     if self.ui.normROICheck.isChecked():
+    #         self.normRoi.show()
+    #     else:
+    #         self.normRoi.hide()
+        
+    #     if not self.ui.normOffRadio.isChecked():
+    #         self.imageDisp = None
+    #         self.updateImage(autoHistogramRange=False)
+    #         self.autoLevels()
+    #         self.roiChanged()
+    #         self.sigProcessingChanged.emit(self)
+
+
 def mkQApp():
     if QtGui.QApplication.instance() is None:
         global QAPP
