@@ -137,24 +137,25 @@ class PLIFView(QWidget):
             img.setCurrentIndex(ind)
         
         def AddLV():
-            timeline,unitline,times,temps,currents,pressures,flows,msdata=readlvfile(self.p['PLIFFile', 'LVFileName'])
+            timeline,unitline,times,temps,currents,pressures,flows,msdata=readlvfile(self.p.child('PLIFFile', 'Path').value() +
+                       '/'+ self.p['PLIFFile', 'LVFileName'])
             #plot(times,temps,times,currents*1000)
             pens=['r','b','g','y','c']
-            win = pg.GraphicsWindow(title="Measurement Parameters")
-            win.resize(1000,600)
-            win.setWindowTitle('Labview Reader')
-            p1 = win.addPlot(title="Heating")
+            self.lvwin = pg.GraphicsWindow(parent=None,title="Measurement Parameters")
+            self.lvwin.resize(1000,600)
+            self.lvwin.setWindowTitle('Labview Reader')
+            p1 = self.lvwin.addPlot(title="Heating")
             p1.addLegend()
             p1.plot(times,temps,pen=(0,255,0),name='Temperature [°C]')
             p1.plot(times,currents*1000,pen=(255,0,0),name='Current [mA]')
             p1.setLabel('bottom',text='time',units='s')
-            win.nextRow()
-            p2 = win.addPlot(title="Flows")
+            self.lvwin.nextRow()
+            p2 = self.lvwin.addPlot(title="Flows")
             for i in range(0,5):
                 p2.plot(times,flows[:,i],pen=pens[i])
             p2.setXLink(p1)
-            win.nextRow()
-            p3 = win.addPlot(title="MS")
+            self.lvwin.nextRow()
+            p3 = self.lvwin.addPlot(title="MS")
             for i in range(0,5):
                 p3.plot(times,np.log10(msdata[:,i]),pen=pens[i])
             p2.setXLink(p1)
@@ -167,7 +168,7 @@ class PLIFView(QWidget):
             self.LVtimeLine.sigPositionChanged.connect(LVtimeLineChanged)
             self.LVtimeLine2.sigPositionChanged.connect(LVtimeLineChanged)
             self.LVtimeLine3.sigPositionChanged.connect(LVtimeLineChanged)
-            QtGui.QApplication.instance().exec_()
+            self.lvwin.show()
 
         def getNumFrames():
             file = sbf(self.p.child('PLIFFile', 'Path').value() +
