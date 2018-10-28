@@ -19,6 +19,7 @@ import numpy as np
 import pyqtgraph as pg
 import pyqtgraph.parametertree.parameterTypes as pTypes
 from pyqtgraph.parametertree import Parameter, ParameterTree, ParameterItem, registerParameterType
+import pyqtgraph.console
 import matplotlib.image as mpimg
 from os import listdir
 from os.path import isfile, join
@@ -41,12 +42,11 @@ class PLIFView(QWidget):
         self.statusProgress = QProgressBar()
         self.status.addWidget(self.statusProgress)
 
-        hlayout = QHBoxLayout(self)
-
+        grid= QGridLayout(self)
         img = ImageViewPfaff(
             view=pg.PlotItem(), additionalCmaps=['viridis', 'jet'])
 
-        hlayout.addWidget(img)
+        grid.addWidget(img,0,0,2,1)
         path = '/home/sebastian/Documents/Data/PdDiamond'
         if len(sys.argv) > 1:
             path = sys.argv[1]
@@ -262,7 +262,9 @@ class PLIFView(QWidget):
         # self.p.child('Geometry','SheetTop').sigValueChanging.connect(redrawSheet)
         # self.p.child('Geometry','SheetBottom').sigValueChanging.connect(redrawSheet)
         initPanel(self)
-        hlayout.addWidget(self.t)
+        grid.addWidget(self.t,0,1)
+        w = pg.TableWidget()
+        grid.addWidget(w,1,1)
         # restore()
 
 

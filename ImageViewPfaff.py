@@ -26,7 +26,7 @@ class ImageViewPfaff(pg.ImageView):
         self.trendroi.setZValue(30)
         self.view.addItem(self.trendroi)
         self.trendroi.hide()
-        
+
         self.gradientEditorItem = self.ui.histogram.item.gradient
 
         self.activeCm = "grey"
@@ -116,7 +116,7 @@ class ImageViewPfaff(pg.ImageView):
             self.ui.roiPlot.setMouseEnabled(False, False)
             self.roiCurve.hide()
             self.ui.roiPlot.hideAxis('left')
-            
+
         if self.hasTimeAxis():
             showRoiPlot = True
             mn = self.tVals.min()
@@ -130,19 +130,19 @@ class ImageViewPfaff(pg.ImageView):
         else:
             self.timeLine.hide()
             #self.ui.roiPlot.hide()
-            
+
         self.ui.roiPlot.setVisible(showRoiPlot)
 
     def normalize(self, image):
             """
             Process *image* using the normalization options configured in the
             control panel.
-            
+
             This can be repurposed to process any data through the same filter.
             """
             if self.ui.normOffRadio.isChecked():
                 return image
-                
+
             div = self.ui.normDivideRadio.isChecked()
             norm = image.view(np.ndarray).copy()
             #if div:
@@ -151,7 +151,7 @@ class ImageViewPfaff(pg.ImageView):
                 #norm = zeros(image.shape)
             if div:
                 norm = norm.astype(np.float32)
-                
+
             if self.ui.normTimeRangeCheck.isChecked() and image.ndim == 3:
                 (sind, start) = self.timeIndex(self.normRgn.lines[0])
                 (eind, end) = self.timeIndex(self.normRgn.lines[1])
@@ -168,7 +168,7 @@ class ImageViewPfaff(pg.ImageView):
                 else:
                     norm=norm.astype(np.float64)
                     norm -= n
-                    
+
             if self.ui.normFrameCheck.isChecked() and image.ndim == 3:
                 n = image.mean(axis=1).mean(axis=1)
                 n.shape = n.shape + (1, 1)
@@ -176,7 +176,7 @@ class ImageViewPfaff(pg.ImageView):
                     norm /= n
                 else:
                     norm -= n
-                
+
             if self.ui.normROICheck.isChecked() and image.ndim == 3:
                 n = self.normRoi.getArrayRegion(norm, self.imageItem, (1, 2)).mean(axis=1).mean(axis=1)
                 n = n[:,np.newaxis,np.newaxis]
@@ -185,7 +185,7 @@ class ImageViewPfaff(pg.ImageView):
                     norm /= n
                 else:
                     norm -= n
-                    
+
             return norm
 
     def quickMinMax(self, data):
@@ -197,20 +197,21 @@ class ImageViewPfaff(pg.ImageView):
             sl = [slice(None)] * data.ndim
             sl[ax] = slice(None, None, 2)
             data = data[sl]
-            data[~np.isfinite(data)] = np.nan
-        return np.nanmin(data), np.nanmax(data)    
+            if data.dtype=='float64':
+                data[~np.isfinite(data)] = np.nan
+        return np.nanmin(data), np.nanmax(data)
 
     # def updateNorm(self):
     #     if self.ui.normTimeRangeCheck.isChecked():
     #         self.normRgn.show()
     #     else:
     #         self.normRgn.hide()
-        
+
     #     if self.ui.normROICheck.isChecked():
     #         self.normRoi.show()
     #     else:
     #         self.normRoi.hide()
-        
+
     #     if not self.ui.normOffRadio.isChecked():
     #         self.imageDisp = None
     #         self.updateImage(autoHistogramRange=False)
@@ -320,7 +321,7 @@ def cmapToColormap(cmap, nTicks=16):
 images = []
 def image(*args, **kargs):
     """
-    Create and return an :class:`ImageWindow <pyqtgraph.ImageWindow>` 
+    Create and return an :class:`ImageWindow <pyqtgraph.ImageWindow>`
     (this is just a window with :class:`ImageView <pyqtgraph.ImageView>` widget inside), show image data inside.
     Will show 2D or 3D image data.
     Accepts a *title* argument to set the title of the window.
