@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 #file=sif('/home/sebastian/Documents/Data/paper1/20171030_refl_16.sif')
 #file=mptif16('C:/Users/Catalysis/Pictures/oxtest1.tif')
 #file=mptif16('C:/Users/Catalysis/Desktop/Data/SOR/2018-05-24/sor_4.tif')
-file=mptif16('E:\sorjonas/ox5.tif')
+file=mptif16('D:\\Catalysis Data\\2019-07-01\\sor\\sor2-1s.tif')
 
 print(file.numimgframes())
 print(file.getimgdata())
@@ -19,7 +19,7 @@ print(file.whichfile(1500))
 
 #imagedata=np.swapaxes(file.readimg(0,-1),0,2)
 #imagedata=np.swapaxes(file.readimg(1400,1499),0,2)
-imagedata=np.swapaxes(plifimg.readimgav(file,0,-1,10),0,2)
+imagedata=np.swapaxes(plifimg.readimgav(file,0,-1,1),0,2)
 # imagedataB=np.roll(np.swapaxes(plifimg.readimgav(fileB,1,500,1),0,2),-2,1)
 # plt.imshow(imagedata[0,:,:])
 # plt.show()

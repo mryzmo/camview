@@ -98,6 +98,10 @@ class mptif16: #support for multipage tifs in several files made by the thorlabs
     def __init__(self, filename):
         self.filename = filename
         self.subfiles=[self]
+        if os.path.isfile(str(filename).split('.tif')[0]+'_0.tif'):
+            self.f=imageio.get_reader(str(filename).split('.tif')[0]+'_0.tif','tiff','I')
+        else:
+            self.f=imageio.get_reader(str(filename),'tiff','I')
         numfiles=1
         while True:
             if os.path.isfile(str(filename).split('.tif')[0]+'_'+str(numfiles-1)+'.tif'):
@@ -264,7 +268,7 @@ class plifimg:
             if img.imageType()=='SBF':
                 numavg=img.numimgframes()//2
         imageDims=img.getimgdata()
-        rs=np.zeros((imageDims[1],imageDims[0],(stopimg-startimg)//numavg),dtype='float64')
+        rs=np.zeros((imageDims[0],imageDims[1],(stopimg-startimg)//numavg),dtype='float64')
         for i in range((stopimg-startimg)//numavg):
             frame=i*numavg+startimg
             print('reading '+str(frame)+' to '+str(frame+numavg-1))

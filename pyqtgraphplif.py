@@ -257,7 +257,9 @@ class PLIFView(QWidget):
             img.setImage(invfactor*self.showData[:, :, top:bottom],
                          autoHistogramRange=False,
                          xvals=np.linspace(self.p.child('PLIFFile', 'BeginFrame').value()/10,
-                                           endframe/10, self.showData.shape[0]))
+                                           endframe/10-1, self.showData.shape[0]))
+            #img.setImage(invfactor*self.showData[:, :, top:bottom],
+            #    autoHistogramRange=False)
             hist = img.getHistogramWidget()
             hist.setLevels(self.p['Geometry', 'ColorMapMin'], self.p['Geometry', 'ColorMapMax'])
         # self.p.child('Geometry','SheetTop').sigValueChanging.connect(redrawSheet)
