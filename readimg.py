@@ -97,7 +97,6 @@ class sif: #sif files made by the andor software. WIP
 class mptif16: #support for multipage tifs in several files made by the thorlabs software
     def __init__(self, filename):
         self.filename = filename
-        self.f=imageio.get_reader(self.filename,'tiff','I')
         self.subfiles=[self]
         numfiles=1
         while True:
