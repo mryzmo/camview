@@ -2,6 +2,7 @@
 import imageio
 import numpy as np
 from scanf import scanf
+<<<<<<< HEAD
 import time
 import os.path
 #from readimg import sbf, plifimg
@@ -141,6 +142,20 @@ class sif: #sif files made by the andor software. WIP, ask Sebastian how fucked 
         height = self.top - self.bottom + 1
         mod = height % self.ybin
         self.height = int((height - mod) / self.xbin)
+=======
+import os.path
+#from readimg import sbf, plifimg
+
+class sif: #sif files made by the andor software. WIP
+    def __init__(self, filename):
+        self.filename = filename
+
+        #self.f=open(self.filename,'rb')
+        #Pixel number6
+        # Counts12
+        # Pixel number65541 1 2160 2560 1 12000 1 1239264000 103272
+        # 65538 730 1780 1722 845 3 3 0
+>>>>>>> a9dfd698b53791532ba867d26c1413cf6d5511f5
 
     def imageType(self):
         return 'AndorSIF'
@@ -169,6 +184,7 @@ class sif: #sif files made by the andor software. WIP, ask Sebastian how fucked 
         return -1
 
     def numimgframes(self):
+<<<<<<< HEAD
         return self.stacksize
 
     def readimg(self,startimg=0,stopimg=-1,offset=0):
@@ -178,14 +194,63 @@ class sif: #sif files made by the andor software. WIP, ask Sebastian how fucked 
             stopimg=NumFrames
         self.f=open(self.filename,'rb')
         self.f.seek(4*startimg*imageDims[0]*imageDims[1]+self.m_offset+offset,0) #zyla file
+=======
+        line=''
+        self.f=open(self.filename,mode='r',errors='ignore')
+        while True:
+            line=self.f.readline()
+            if line.startswith('Pixel number'):
+                line=self.f.readline()
+                line=self.f.readline()
+                out=scanf('Pixel number%d %d %d %d %d %d %d %d %d', s=line, collapseWhitespace=False)
+                self.f.close()
+                return out[int(5)]
+        self.f.close()
+        return -1
+
+    def findoffsetbyte(self):
+        imageDims=self.getimgdata()
+        NumFrames=self.numimgframes()
+        self.f=open(self.filename,'rb')
+        for offset in {0,1,2,3}:
+            self.f.seek(2*0*imageDims[0]*imageDims[1]+2832+1*32*NumFrames,0)
+            self.f.seek(offset,1)
+            imageraw=self.f.read(4*imageDims[0]*imageDims[1])
+            image=np.frombuffer(imageraw,dtype='f')
+            testimage=np.reshape(image,(imageDims[1],imageDims[0]))
+            testmean=np.mean(np.mean(testimage))
+            if testmean < 66000 and testmean > 100:
+                return offset
+        return 0
+
+    def readimg(self,startimg=0,stopimg=-1):
+        #num_bytes_to_skip_for_curr_frame = 4 * ((currentFrameNumber(1)-1) * info.pixelPerFrame);
+        #fseek(f, num_bytes_to_skip_for_curr_frame+1*2832+1*32*NumFrames, 'bof');
+        imageDims=self.getimgdata()
+        NumFrames=self.numimgframes()
+        OffsetByte=self.findoffsetbyte()
+        if stopimg<0:
+            stopimg=NumFrames
+        self.f=open(self.filename,'rb')
+        self.f.seek(4*startimg*imageDims[0]*imageDims[1]+2832+1*32*NumFrames,0) #zyla file
+        #self.f.seek(4*startimg*imageDims[0]*imageDims[1]+22000+0*32*NumFrames,0) #istar file
+        #figure out the "weird" byte
+        self.f.seek(OffsetByte,1)
+>>>>>>> a9dfd698b53791532ba867d26c1413cf6d5511f5
         rs=np.zeros((imageDims[1],imageDims[0],stopimg-startimg),dtype='f')
         for i in range(stopimg-startimg):
             imageraw=self.f.read(4*imageDims[0]*imageDims[1])
             image=np.frombuffer(imageraw,dtype='f')
+<<<<<<< HEAD
+=======
+            #imagebg=f.read(65536*2)
+            #imdb=np.subtract(np.frombuffer(image,dtype='h'),np.frombuffer(imagebg,dtype='h'))
+>>>>>>> a9dfd698b53791532ba867d26c1413cf6d5511f5
             rs[:,:,i]=np.reshape(image,(imageDims[1],imageDims[0]))
         #f.close()
         return rs
 
+<<<<<<< HEAD
 class lvsor: #SOR images created by labview, these are always 16 bits
     def __init__(self, filename):
         self.f=open(filename,'rb')
@@ -222,10 +287,13 @@ class lvsor: #SOR images created by labview, these are always 16 bits
             rs[:,:,i]=np.reshape(imdb,(height,width))
         #f.close()
         return rs
+=======
+>>>>>>> a9dfd698b53791532ba867d26c1413cf6d5511f5
 
 class mptif16: #support for multipage tifs in several files made by the thorlabs software
     def __init__(self, filename):
         self.filename = filename
+<<<<<<< HEAD
         self.f=imageio.get_reader(self.filename,'tiff','I')
         self.subfiles=[self]
         numfiles=1
@@ -233,6 +301,17 @@ class mptif16: #support for multipage tifs in several files made by the thorlabs
             #print(str(filename).split('.tif')[0]+'_'+str(numfiles)+'.tif')
             if os.path.isfile(str(filename).split('.tif')[0]+'_'+str(numfiles)+'.tif'):
                 self.subfiles.append(mptif16(str(self.filename).split('.tif')[0]+'_'+str(numfiles)+'.tif'))
+=======
+        self.subfiles=[self]
+        if os.path.isfile(str(filename).split('.tif')[0]+'_0.tif'):
+            self.f=imageio.get_reader(str(filename).split('.tif')[0]+'_0.tif','tiff','I')
+        else:
+            self.f=imageio.get_reader(str(filename),'tiff','I')
+        numfiles=1
+        while True:
+            if os.path.isfile(str(filename).split('.tif')[0]+'_'+str(numfiles-1)+'.tif'):
+                self.subfiles.append(mptif16(str(self.filename).split('.tif')[0]+'_'+str(numfiles-1)+'.tif'))
+>>>>>>> a9dfd698b53791532ba867d26c1413cf6d5511f5
                 numfiles+=1
             else:
                 break
@@ -253,8 +332,13 @@ class mptif16: #support for multipage tifs in several files made by the thorlabs
             return self.f.get_length()
         else:
             total=self.f.get_length()
+<<<<<<< HEAD
             for i in range(self.getnumfiles()-1):
                 nextfile=mptif16(str(self.filename).split('.tif')[0]+'_'+str(i+1)+'.tif')
+=======
+            for i in range(self.getnumfiles()-2):
+                nextfile=mptif16(str(self.filename).split('.tif')[0]+'_'+str(i)+'.tif')
+>>>>>>> a9dfd698b53791532ba867d26c1413cf6d5511f5
                 total=total+nextfile.numimgframes(onlythis=True)
             return total
 
@@ -265,7 +349,11 @@ class mptif16: #support for multipage tifs in several files made by the thorlabs
             total=[]
             total.append(self.f.get_length())
             for i in range(self.getnumfiles()-1):
+<<<<<<< HEAD
                 nextfile=mptif16(str(self.filename).split('.tif')[0]+'_'+str(i+1)+'.tif')
+=======
+                nextfile=mptif16(str(self.filename).split('.tif')[0]+'_'+str(i)+'.tif')
+>>>>>>> a9dfd698b53791532ba867d26c1413cf6d5511f5
                 total.append(nextfile.numimgframes(onlythis=True))
             return total
 
@@ -280,7 +368,11 @@ class mptif16: #support for multipage tifs in several files made by the thorlabs
         currframe=frame
         while True:
             currframe-=framenums[imgfile]
+<<<<<<< HEAD
             if currframe<=0:
+=======
+            if currframe<0:
+>>>>>>> a9dfd698b53791532ba867d26c1413cf6d5511f5
                 return imgfile,framenums[imgfile]+currframe
             imgfile+=1
         return 0
@@ -311,7 +403,11 @@ class mptif16: #support for multipage tifs in several files made by the thorlabs
             rs=np.zeros((imageDims[0],imageDims[1],stopimg-startimg),dtype='uint16')
             for i in range(stopimg-startimg):
                 rs[:,:,i]=self.f.get_next_data()
+<<<<<<< HEAD
                 #print('.', end='',flush=True)
+=======
+                print('.', end='',flush=True)
+>>>>>>> a9dfd698b53791532ba867d26c1413cf6d5511f5
             #f.close()
         return rs
 
@@ -348,11 +444,19 @@ class sbf: #files made by the SBF IR camera software
         #f.close()
         return rs
 
+<<<<<<< HEAD
     def readimg(self,startimg=0,stopimg=-1,altbg=False):
         if startimg > self.numimgframes():
             return np.zeros((256,256),dtype='h')
         if stopimg > self.numimgframes():
             stopimg=self.numimgframes()//2
+=======
+    def readimg(self,startimg=0,stopimg=-1):
+        if startimg > self.numimgframes():
+            return np.zeros((256,256),dtype='h')
+        if stopimg > self.numimgframes():
+            stopimg=stopimg=self.numimgframes()//2
+>>>>>>> a9dfd698b53791532ba867d26c1413cf6d5511f5
         f=self.f
         if stopimg<0:
             stopimg=self.numimgframes()//2
@@ -360,26 +464,52 @@ class sbf: #files made by the SBF IR camera software
         f.seek(512+65536*4*startimg,0)
         rs=np.zeros((256,256,stopimg-startimg),dtype='h')
         for i in range(stopimg-startimg):
+<<<<<<< HEAD
             if altbg:
                 imagebg=f.read(65536*2)
                 image=f.read(65536*2)
             else:
                 image=f.read(65536*2)
                 imagebg=f.read(65536*2)
+=======
+            image=f.read(65536*2)
+            imagebg=f.read(65536*2)
+>>>>>>> a9dfd698b53791532ba867d26c1413cf6d5511f5
             imdb=np.subtract(np.frombuffer(image,dtype='h'),np.frombuffer(imagebg,dtype='h'))
             rs[:,:,i]=np.reshape(imdb,(256,256))
         #f.close()
         return rs
 
+<<<<<<< HEAD
 class plifimg:
     def readimgav(img,startimg=0,stopimg=-1,numavg=10,altbg=False,status=True,binning=None,forcefunc=False):
+=======
+    # def readimgav(self,startimg=0,stopimg=-1,numavg=10):
+    #     if stopimg<0: #if -1, read to end
+    #         stopimg=self.numimgframes()//2
+    #     rs=np.zeros((256,256,(stopimg-startimg)//numavg),dtype='h')
+    #     for i in range((stopimg-startimg)//numavg):
+    #         frame=i*numavg+startimg
+    #         temp=self.readimg(frame,frame+numavg-1)
+    #         rs[:,:,i]=np.mean(temp,axis=2)
+    #     return rs
+    # def close(self):
+    #     self.f.close()
+
+class plifimg:
+    def readimgav(img,startimg=0,stopimg=-1,numavg=10):
+>>>>>>> a9dfd698b53791532ba867d26c1413cf6d5511f5
         if stopimg<0 or \
          (img.imageType()=='SBF' and stopimg>img.numimgframes()//2) or \
          stopimg>img.numimgframes():  #if -1, read to end
             stopimg=img.numimgframes()
             if img.imageType()=='SBF':
                 stopimg=img.numimgframes()//2
+<<<<<<< HEAD
         if numavg==1 and not forcefunc: #1 average one = no average
+=======
+        if numavg==1: #1 average one = no average
+>>>>>>> a9dfd698b53791532ba867d26c1413cf6d5511f5
             rs=img.readimg(startimg,stopimg)
             return rs
         if numavg==-1: #if -1, average all
@@ -387,6 +517,7 @@ class plifimg:
             if img.imageType()=='SBF':
                 numavg=img.numimgframes()//2
         imageDims=img.getimgdata()
+<<<<<<< HEAD
         if img.imageType()=='AndorSIF' or img.imageType()=='LVSor':
             rs=np.zeros((imageDims[1],imageDims[0],(stopimg-startimg)//numavg),dtype='float64')
         else:
@@ -434,3 +565,50 @@ class plifimg:
                 else:
                     plifSpace=np.arange(0,plifLength,numAvg/10)
                     return profileFunction(plifSpace)
+=======
+        rs=np.zeros((imageDims[0],imageDims[1],(stopimg-startimg)//numavg),dtype='float64')
+        for i in range((stopimg-startimg)//numavg):
+            frame=i*numavg+startimg
+            print('reading '+str(frame)+' to '+str(frame+numavg-1))
+            temp=img.readimg(frame,frame+numavg-1)
+            rs[:,:,i]=np.nanmean(temp,axis=2)
+        return rs
+
+from pims import FramesSequence, Frame
+class SBFReader(FramesSequence):
+    def __init__(self, filename):
+        self.sbffile=sbf(filename)
+        self.filename = filename
+        self._len = self.sbffile.numimgframes()//2 # however many frames there will be
+        self._dtype =  'h'# the numpy datatype of the frames
+        self._frame_shape =(256,256)  # the shape, like (512, 512), of an
+                             # individual frame -- maybe get this by
+                             # opening the first frame
+        # Do whatever setup you need to do to be able to quickly access
+        # individual frames later.
+
+    def get_frame(self, i):
+        # Access the data you need and get it into a numpy array.
+        # Then return a Frame like so:
+        framearray=self.sbffile.readimg(i,i+1)
+        return Frame(framearray[:,:,0], frame_no=i)
+
+    def __len__(self):
+         return self._len
+
+    def close(self):
+        self.sbffile.close()
+
+
+    @property
+    def frame_shape(self):
+         return self._frame_shape
+
+    @property
+    def pixel_type(self):
+         return self._dtype
+
+    @classmethod
+    def class_exts(self):
+        return {'img'} | super().class_exts()
+>>>>>>> a9dfd698b53791532ba867d26c1413cf6d5511f5
