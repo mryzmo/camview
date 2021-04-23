@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import pyqtgraph as pg
 import numpy as np
 
@@ -12,6 +13,21 @@ import collections
 QAPP = None
 
 class ImageViewPfaff(pg.ImageView):
+    images = []
+    def image(*args, **kargs):
+        """
+        Create and return an :class:`ImageWindow <pyqtgraph.ImageWindow>`
+        (this is just a window with :class:`ImageView <pyqtgraph.ImageView>` widget inside), show image data inside.
+        Will show 2D or 3D image data.
+        Accepts a *title* argument to set the title of the window.
+        All other arguments are used to show data. (see :func:`ImageView.setImage() <pyqtgraph.ImageView.setImage>`)
+        """
+        mkQApp()
+        w = ImageWindow(*args, **kargs)
+        images.append(w)
+        w.show()
+        return w
+
     def buildMenu(self):
         super(ImageViewPfaff, self).buildMenu()
 
@@ -71,6 +87,7 @@ class ImageViewPfaff(pg.ImageView):
                 act.name = cmapName
                 self.gradientEditorItem.menu.addAction(act)
         self.gradientEditorItem.length = savedLength
+        
 
 
     def cmapClicked(self, b=None):
@@ -89,6 +106,18 @@ class ImageViewPfaff(pg.ImageView):
         ============= =========================================================
         """
         self.ui.histogram.gradient.setColorMap(colormap)
+
+    def getProcessedImage(self):
+        """Returns the image data after it has been processed by any normalization options in use.
+        """
+        if self.imageDisp is None:
+            image = self.normalize(self.image)
+            self.imageDisp = image
+            self._imageLevels = self.quickMinMax(self.imageDisp)
+            self.levelMin = 0
+            self.levelMax = 2
+            
+        return self.imageDisp
 
 
     @addGradientListToDocstring()
@@ -133,60 +162,60 @@ class ImageViewPfaff(pg.ImageView):
 
         self.ui.roiPlot.setVisible(showRoiPlot)
 
-    def normalize(self, image):
-            """
-            Process *image* using the normalization options configured in the
-            control panel.
+    # def normalize(self, image):
+    #         """
+    #         Process *image* using the normalization options configured in the
+    #         control panel.
 
-            This can be repurposed to process any data through the same filter.
-            """
-            if self.ui.normOffRadio.isChecked():
-                return image
+    #         This can be repurposed to process any data through the same filter.
+    #         """
+    #         if self.ui.normOffRadio.isChecked():
+    #             return image
 
-            div = self.ui.normDivideRadio.isChecked()
-            norm = image.view(np.ndarray).copy()
-            #if div:
-                #norm = ones(image.shape)
-            #else:
-                #norm = zeros(image.shape)
-            if div:
-                norm = norm.astype(np.float32)
+    #         div = self.ui.normDivideRadio.isChecked()
+    #         norm = image.view(np.ndarray).copy()
+    #         #if div:
+    #             #norm = ones(image.shape)
+    #         #else:
+    #             #norm = zeros(image.shape)
+    #         if div:
+    #             norm = norm.astype(np.float64)
 
-            if self.ui.normTimeRangeCheck.isChecked() and image.ndim == 3:
-                (sind, start) = self.timeIndex(self.normRgn.lines[0])
-                (eind, end) = self.timeIndex(self.normRgn.lines[1])
-                #print start, end, sind, eind
-                #n = image[sind:eind+1].mean(axis=0)
-                print('averaging time range...')
-                if eind<sind: #swap order if it is wrong
-                    sind,eind=eind,sind
-                n = np.nanmean(image[sind:eind+1],axis=0)
-                n.shape = (1,) + n.shape
-                if div:
-                    print('performing division...')
-                    norm /= n
-                else:
-                    norm=norm.astype(np.float64)
-                    norm -= n
+    #         if self.ui.normTimeRangeCheck.isChecked() and image.ndim == 3:
+    #             (sind, start) = self.timeIndex(self.normRgn.lines[0])
+    #             (eind, end) = self.timeIndex(self.normRgn.lines[1])
+    #             #print start, end, sind, eind
+    #             #n = image[sind:eind+1].mean(axis=0)
+    #             print('averaging time range...')
+    #             if eind<sind: #swap order if it is wrong
+    #                 sind,eind=eind,sind
+    #             n = np.nanmean(image[sind:eind+1],axis=0)
+    #             n.shape = (1,) + n.shape
+    #             if div:
+    #                 print('performing division...')
+    #                 norm /= n
+    #             else:
+    #                 norm=norm.astype(np.float64)
+    #                 norm -= n
 
-            if self.ui.normFrameCheck.isChecked() and image.ndim == 3:
-                n = image.mean(axis=1).mean(axis=1)
-                n.shape = n.shape + (1, 1)
-                if div:
-                    norm /= n
-                else:
-                    norm -= n
+    #         if self.ui.normFrameCheck.isChecked() and image.ndim == 3:
+    #             n = image.mean(axis=1).mean(axis=1)
+    #             n.shape = n.shape + (1, 1)
+    #             if div:
+    #                 norm /= n
+    #             else:
+    #                 norm -= n
 
-            if self.ui.normROICheck.isChecked() and image.ndim == 3:
-                n = self.normRoi.getArrayRegion(norm, self.imageItem, (1, 2)).mean(axis=1).mean(axis=1)
-                n = n[:,np.newaxis,np.newaxis]
-                #print start, end, sind, eind
-                if div:
-                    norm /= n
-                else:
-                    norm -= n
+    #         if self.ui.normROICheck.isChecked() and image.ndim == 3:
+    #             n = self.normRoi.getArrayRegion(norm, self.imageItem, (1, 2)).mean(axis=1).mean(axis=1)
+    #             n = n[:,np.newaxis,np.newaxis]
+    #             #print start, end, sind, eind
+    #             if div:
+    #                 norm /= n
+    #             else:
+    #                 norm -= n
 
-            return norm
+    #         return norm
 
     def quickMinMax(self, data):
         """
@@ -226,22 +255,24 @@ def mkQApp():
         QAPP = QtGui.QApplication([])
 
 class ImageWindow(ImageViewPfaff):
+    #sigClosed = QtCore.Signal(object)
+
+    """
+    (deprecated; use :class:`~pyqtgraph.ImageView` instead)
+    """
     def __init__(self, *args, **kargs):
         mkQApp()
-        self.win = QtGui.QMainWindow()
-        self.win.resize(800,600)
+        ImageView.__init__(self)
         if 'title' in kargs:
-            self.win.setWindowTitle(kargs['title'])
+            self.setWindowTitle(kargs['title'])
             del kargs['title']
-        ImageView.__init__(self, self.win)
         if len(args) > 0 or len(kargs) > 0:
             self.setImage(*args, **kargs)
-        self.win.setCentralWidget(self)
-        for m in ['resize']:
-            setattr(self, m, getattr(self.win, m))
-        #for m in ['setImage', 'autoRange', 'addItem', 'removeItem', 'blackLevel', 'whiteLevel', 'imageItem']:
-            #setattr(self, m, getattr(self.cw, m))
-        self.win.show()
+        self.show()
+
+    def closeEvent(self, event):
+        ImageView.closeEvent(self, event)
+        self.sigClosed.emit(self)
 
 
 def cmapToColormap(cmap, nTicks=16):

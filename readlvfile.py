@@ -43,7 +43,7 @@ def readlvfile(filename):
             pressures[i,j-3]=float(columns[i][j])
         for j in range(7,12):
             flows[i,j-7]=columns[i][j]
-        if len(columns[1]) > 12:
+        if len(columns[i]) > 12:
             for j in range(12,17):
                 msdata[i,j-12]=float(columns[i][j])
         

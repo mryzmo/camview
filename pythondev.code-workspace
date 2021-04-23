@@ -1,0 +1,10 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"python.dataScience.jupyterServerURI": "https://lyra.forbrf.lth.se:8000/user/sebastian/?token=905b5233489a428aacb835e37c195181"
+	}
+}
