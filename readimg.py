@@ -372,6 +372,7 @@ class sbf: #files made by the SBF IR camera software
         return rs
 
 class plifimg:
+    @staticmethod
     def readimgav(img,startimg=0,stopimg=-1,numavg=10,altbg=False,status=True,binning=None,forcefunc=False):
         if stopimg<0 or \
          (img.imageType()=='SBF' and stopimg>img.numimgframes()//2) or \
@@ -402,6 +403,7 @@ class plifimg:
             rs[:,:,i]=np.nanmean(temp,axis=2)
         return rs
     
+    @staticmethod
     def makeProfileFunction(profileMeta,labView=None,plifLength=None,numAvg=10):
             from readlvfile2 import readlvfile2dict
             from scipy.interpolate import interp1d
