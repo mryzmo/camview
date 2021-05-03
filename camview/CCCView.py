@@ -17,9 +17,6 @@ from PyQt5.QtGui import QIcon
 
 import numpy as np
 import pyqtgraph as pg
-import pyqtgraph.parametertree.parameterTypes as pTypes
-from pyqtgraph.parametertree import Parameter, ParameterTree, ParameterItem, registerParameterType
-import pyqtgraph.console
 import matplotlib.image as mpimg
 from os import listdir
 import os
@@ -55,8 +52,9 @@ class CCCView(QWidget):
         self.showData=np.random.rand(256,256,256)
         self.averagedProfiles={}
         self.childViews=[]
-
         self.path = './testdata/2021-03-18/'
+        #self.initUI()
+
         if len(sys.argv) > 1:
             self.path = sys.argv[1]
         if self.LoadFileName is not None:
@@ -460,6 +458,7 @@ if __name__ == '__main__':
     app.setApplicationName('LU PLIF Viewer')
     app.setWindowIcon(QIcon('PLIF-icon-256.png'))
     plifv = CCCView()
+    plifv.initUI()
     # sys.exit(app.exec_())
     app.exec_()
 

@@ -17,8 +17,7 @@ from PyQt5.QtGui import QIcon
 
 import numpy as np
 import pyqtgraph as pg
-import pyqtgraph.parametertree.parameterTypes as pTypes
-from pyqtgraph.parametertree import Parameter, ParameterTree, ParameterItem, registerParameterType
+
 import pyqtgraph.console
 import matplotlib.image as mpimg
 from os import listdir
@@ -46,9 +45,10 @@ class PLIFView(CCCView):
         self.divProfile=True
         self.averagedProfiles={}
         self.pathBoxes=[]
-        self.initUI()
+
         self.showProfile=False
         self.UseAltBg=False
+        self.initUI()
 
     def initUI(self):
         #self.path = './testdata/2021-03-17/'
