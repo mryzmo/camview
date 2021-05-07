@@ -6,6 +6,48 @@ import time
 import os.path
 #from readimg import sbf, plifimg
 
+class imformat:
+    """Function skeleton for image reader class
+    """
+    def __init__(self, filename):
+        """[summary]
+
+        Args:
+            filename (string): image filename to open
+        """
+        self.f=open(filename,'rb')
+
+    def imageType(self):
+        """get the image type
+
+        Returns:
+            string: image type
+        """
+        return 'None'
+
+    def getimgdata(self):
+        """Returns width and height as a tuple.
+        Returns:
+        tuple: width, height
+        """
+        pass
+
+    def numimgframes(self):
+        """get number of frames in dataset
+        Returns:
+        int: number of frames
+        """
+        pass
+
+    def readimg(self,startimg=0,stopimg=1):
+        """[summary]
+
+        Args:
+            startimg (int, optional): [description]. Defaults to 0.
+            stopimg (int, optional): [description]. Defaults to 1.
+        """
+        pass
+
 class sif: #sif files made by the andor software. WIP, ask Sebastian how fucked up the Andor file format is....
     """
     A class that reads the contents and metadata of an Andor .sif file. Compatible with images as well as spectra.
@@ -187,6 +229,8 @@ class sif: #sif files made by the andor software. WIP, ask Sebastian how fucked 
         return rs
 
 class lvsor: #SOR images created by labview, these are always 16 bits
+    """Reads the custom format created by the Catalysis Group LabView program for SOR images.
+    """
     def __init__(self, filename):
         self.f=open(filename,'rb')
 
@@ -223,14 +267,15 @@ class lvsor: #SOR images created by labview, these are always 16 bits
         #f.close()
         return rs
 
-class mptif16: #support for multipage tifs in several files made by the thorlabs software
+class mptif16:
+    """Class to read multi-page TIFF files as produced by the Thorcam software by Thorlabs. One dataset can be split into many subfiles.
+    """
     def __init__(self, filename):
         self.filename = filename
         self.f=imageio.get_reader(self.filename,'tiff','I')
         self.subfiles=[self]
         numfiles=1
         while True:
-            #print(str(filename).split('.tif')[0]+'_'+str(numfiles)+'.tif')
             if os.path.isfile(str(filename).split('.tif')[0]+'_'+str(numfiles)+'.tif'):
                 self.subfiles.append(mptif16(str(self.filename).split('.tif')[0]+'_'+str(numfiles)+'.tif'))
                 numfiles+=1
@@ -238,17 +283,27 @@ class mptif16: #support for multipage tifs in several files made by the thorlabs
                 break
         self.numfiles=numfiles
         self.imagedata=self.f.get_next_data()
-        # if numfiles>1:
-        #     for s in self.subfiles:
-        #         print(s.numimgframes(onlythis=True))
-        #flagga om subfil
+
     def getnumfiles(self):
+        """Get number of subfiles in dataset.
+
+        Returns:
+            int: Number of subfiles
+        """
         return self.numfiles
 
     def imageType(self):
         return 'MPTIF'
 
     def numimgframes(self,onlythis=False):
+        """Get number of frames in the dataset.
+
+        Args:
+            onlythis (bool, optional): Whether to consider subfiles. Defaults to False.
+
+        Returns:
+            int: nunber of frames
+        """
         if self.numfiles==1 or onlythis:
             return self.f.get_length()
         else:
@@ -259,6 +314,11 @@ class mptif16: #support for multipage tifs in several files made by the thorlabs
             return total
 
     def numimgframesperfile(self):
+        """Gets number of frames per subfile.
+
+        Returns:
+            int: number of frames
+        """
         if self.numfiles==1:
             return self.f.get_length()
         else:
@@ -270,9 +330,22 @@ class mptif16: #support for multipage tifs in several files made by the thorlabs
             return total
 
     def getimgdata(self): #returns width,height
+        """Get image dimensions
+
+        Returns:
+            tuple: (width,height)
+        """
         return np.shape(self.imagedata)
 
     def whichfile(self,frame):
+        """Check which subfile contains a certain frame.
+
+        Args:
+            frame (int): The frame to check
+
+        Returns:
+            int: subfile number with that frame.
+        """
         if self.numfiles==1:
             return 0
         framenums=self.numimgframesperfile()
@@ -286,6 +359,16 @@ class mptif16: #support for multipage tifs in several files made by the thorlabs
         return 0
 
     def readimg(self,startimg=0,stopimg=-1,onlythis=False):
+        """Read image sequence. Will automatically consider subfiles.
+
+        Args:
+            startimg (int, optional): Read from this image number. Defaults to 0 (beginning of file).
+            stopimg (int, optional): Read to this image number, -1 reads entire file. Defaults to -1 (eof).
+            onlythis (bool, optional): Ignore subfiles. Defaults to False.
+
+        Returns:
+            numpy array: Array with all the images. Axis order is (x,y,t).
+        """
         imageDims=self.getimgdata()
         if stopimg<0:
             if onlythis:
@@ -315,29 +398,56 @@ class mptif16: #support for multipage tifs in several files made by the thorlabs
             #f.close()
         return rs
 
-class sbf: #files made by the SBF IR camera software
-    def __init__(self, filename):
+class sbf:
+    """Class to read files made by the WinIR 3.x software by Santa Barbara Focalplane.
+    """
+    def __init__(self, filename,numbgframes=1):
+        self.numbgframes=numbgframes
         self.filename = filename
         self.f=open(self.filename,'rb')
 
     def imageType(self):
         return 'SBF'
 
-    def numimgframes(self):
+    def numimgframes(self, rawcount=False):
         self.f.seek(42,0)
-        return(int.from_bytes(self.f.read(4),byteorder='little'))
+        if rawcount:
+            return(int.from_bytes(self.f.read(4),byteorder='little'))
+        else:
+            return(int.from_bytes(self.f.read(4),byteorder='little'))//(self.numbgframes+1)
 
     def getimgdata(self): #returns width,height
         return (256,256)
 
+    def findPLIFframe(self):
+        """This function checks the PLIF data in three places (25% in, 50% in and 75% in.
+        It then tries to find which frame is the one with PLIF data in it (and not bg)
+
+        Returns:
+            int: first frame with laser
+        """
+        cycleframes=self.numbgframes+1
+        fractions=np.array([.25,.5,.75]) #where to check
+        startframes=self.numimgframes(True)*fractions//cycleframes*cycleframes
+        #now load 10 cycles at every spot and find the maximum of each cycle
+        allmax=[]
+        for startframe in startframes:
+            for cycle in range(10):
+                cycledata=self.readraw(int(startframe+cycle*cycleframes),int(startframe+(cycle*cycleframes)+cycleframes))
+                roi=np.mean(cycledata[100:120,100:120,:],axis=(0,1))
+                allmax.append(np.argmax(roi))
+        return np.argmax(np.bincount(np.array(allmax)))
+
+
     def readraw(self,startimg=0,stopimg=1):
-        if startimg > self.numimgframes():
+        stopimg=stopimg
+        if startimg > self.numimgframes(rawcount=True):
             return np.zeros((256,256),dtype='h')
-        if stopimg > self.numimgframes():
-            stopimg=stopimg=self.numimgframes()
+        if stopimg > self.numimgframes(rawcount=True):
+            stopimg=stopimg=self.numimgframes(rawcount=True)
         f=self.f
         if stopimg<0:
-            stopimg=self.numimgframes()
+            stopimg=self.numimgframes(rawcount=True)
         #f.seek(512,0)
         f.seek(512+65536*2*startimg,0)
         rs=np.zeros((256,256,stopimg-startimg),dtype='h')
@@ -347,17 +457,35 @@ class sbf: #files made by the SBF IR camera software
             rs[:,:,i]=np.reshape(imdb,(256,256))
         #f.close()
         return rs
-
+    
     def readimg(self,startimg=0,stopimg=-1,altbg=False):
+        """Reads the SBF format images
+
+        Args:
+            startimg (int, optional): Read from this image number. Defaults to 0 (beginning of file).
+            stopimg (int, optional): Read to this image number, -1 reads entire file. Defaults to -1 (eof).
+            altbg (bool, optional): Use the background before the data frame rather than that after. Defaults to False.
+            numbgframes (int, optional): Number of background frames between PLIF frames. Defaults to 1.
+            plifframe (int, optional): Which frame is the PLIF frame in each frame cycle. Defaults to 0.
+
+        Returns:
+            numpy array: Array with all the images. Axis order is (x,y,t)
+        """
+        cycleframes=self.numbgframes+1 #number of frames in 100 ms, usually 2 unless hifps on IR camera
+        skipframes=cycleframes-2 #background frames to skip 
+        #initialskip = plifframe%cycleframes #make sure the skip is periodic
+        initialskip = self.findPLIFframe() #make sure the skip is periodic
+        if altbg:
+            plifframe=plifframe-1
         if startimg > self.numimgframes():
             return np.zeros((256,256),dtype='h')
         if stopimg > self.numimgframes():
-            stopimg=self.numimgframes()//2
+            stopimg=self.numimgframes()//cycleframes
         f=self.f
         if stopimg<0:
-            stopimg=self.numimgframes()//2
-        #f.seek(512,0)
-        f.seek(512+65536*4*startimg,0)
+            stopimg=self.numimgframes()//cycleframes
+        #skip 512 byte header, then skip one cycle/frame, then skip the initialskip
+        f.seek(512+65536*2*cycleframes*startimg+65536*2*initialskip,0)
         rs=np.zeros((256,256,stopimg-startimg),dtype='h')
         for i in range(stopimg-startimg):
             if altbg:
@@ -368,25 +496,38 @@ class sbf: #files made by the SBF IR camera software
                 imagebg=f.read(65536*2)
             imdb=np.subtract(np.frombuffer(image,dtype='h'),np.frombuffer(imagebg,dtype='h'))
             rs[:,:,i]=np.reshape(imdb,(256,256))
+            f.seek(65536*2*skipframes,1)
         #f.close()
         return rs
 
 class plifimg:
+    """This class contains static utility functions that are nice to have when handling PLIF images.
+    """
     @staticmethod
-    def readimgav(img,startimg=0,stopimg=-1,numavg=10,altbg=False,status=True,binning=None,forcefunc=False):
+    def readimgav(img,startimg=0,stopimg=-1,numavg=10,status=True,binning=None,forcefunc=False,**kwargs):
+        """Reads an image file and averages a number of frames in time. This conserves memory when reading large files.
+
+        Args:
+            img (imformat): Image file to read
+            startimg (int, optional): Read from this image, default is start of file. Defaults to 0.
+            stopimg (int, optional): Read to this frame, -1 will read the entire file. Defaults to -1.
+            numavg (int, optional): Number of images to average. Defaults to 10.
+            status (bool, optional): Verbose status prints. Defaults to True.
+            binning ([type], optional): Binning in space. Not implemented. Defaults to None.
+            forcefunc (bool, optional): Force the use of the averaging function even for numavg=1. Defaults to False.
+
+        Returns:
+            numpy array: Array with all the images. Axis order is (x,y,t)
+        """
         if stopimg<0 or \
          (img.imageType()=='SBF' and stopimg>img.numimgframes()//2) or \
          stopimg>img.numimgframes():  #if -1, read to end
             stopimg=img.numimgframes()
-            if img.imageType()=='SBF':
-                stopimg=img.numimgframes()//2
         if numavg==1 and not forcefunc: #1 average one = no average
-            rs=img.readimg(startimg,stopimg)
+            rs=img.readimg(startimg,stopimg,**kwargs)
             return rs
         if numavg==-1: #if -1, average all
             numavg=img.numimgframes()
-            if img.imageType()=='SBF':
-                numavg=img.numimgframes()//2
         imageDims=img.getimgdata()
         if img.imageType()=='AndorSIF' or img.imageType()=='LVSor':
             rs=np.zeros((imageDims[1],imageDims[0],(stopimg-startimg)//numavg),dtype='float64')
@@ -397,42 +538,51 @@ class plifimg:
             frame=i*numavg+startimg
             if (status):
                 print('reading '+str(frame)+' to '+str(frame+numavg-1))
-            temp=img.readimg(frame,frame+numavg-1)
-            if altbg:
-                temp=img.readimg(frame,frame+numavg-1,True)
+            temp=img.readimg(frame,frame+numavg-1,**kwargs)
             rs[:,:,i]=np.nanmean(temp,axis=2)
         return rs
     
     @staticmethod
     def makeProfileFunction(profileMeta,labView=None,plifLength=None,numAvg=10):
-            from readlvfile2 import readlvfile2dict
-            from scipy.interpolate import interp1d
-            if np.size(profileMeta)==1: #assume single filename, just load and average all
-                if profileMeta.endswith('sif'):
-                    return np.abs(np.squeeze(plifimg.readimgav(sif(profileMeta),numavg=-1,status=False)))
-                else:
-                    return np.abs(np.squeeze(plifimg.readimgav(sbf(profileMeta),numavg=-1,status=False)))
+        """[summary]
+
+        Args:
+            profileMeta ([type]): [description]
+            labView ([type], optional): [description]. Defaults to None.
+            plifLength ([type], optional): [description]. Defaults to None.
+            numAvg (int, optional): [description]. Defaults to 10.
+
+        Returns:
+            [type]: [description]
+        """
+        from readlvfile2 import readlvfile2dict
+        from scipy.interpolate import interp1d
+        if np.size(profileMeta)==1: #assume single filename, just load and average all
+            if profileMeta.endswith('sif'):
+                return np.abs(np.squeeze(plifimg.readimgav(sif(profileMeta),numavg=-1,status=False)))
+            else:
+                return np.abs(np.squeeze(plifimg.readimgav(sbf(profileMeta),numavg=-1,status=False)))
 
 
-            if np.size(profileMeta)==2 and profileMeta[1]=='ramp': #assume its a ramp, just return it with x avg
-                if profileMeta[0].endswith('sif'):
-                    return np.swapaxes(np.swapaxes(np.abs(np.squeeze(plifimg.readimgav(sif(profileMeta[0]),numavg=numAvg,status=False))), 0, 2), 1, 2)
-                else:
-                    return np.swapaxes(np.swapaxes(np.abs(np.squeeze(plifimg.readimgav(sbf(profileMeta[0]),numavg=numAvg,status=False))), 0, 2), 1, 2)
+        if np.size(profileMeta)==2 and profileMeta[1]=='ramp': #assume its a ramp, just return it with x avg
+            if profileMeta[0].endswith('sif'):
+                return np.swapaxes(np.swapaxes(np.abs(np.squeeze(plifimg.readimgav(sif(profileMeta[0]),numavg=numAvg,status=False))), 0, 2), 1, 2)
+            else:
+                return np.swapaxes(np.swapaxes(np.abs(np.squeeze(plifimg.readimgav(sbf(profileMeta[0]),numavg=numAvg,status=False))), 0, 2), 1, 2)
 
-            else: #assume multiple profiles in a tuple.
-                profileData=np.zeros([len(profileMeta[0]),256,256])
-                for prf in range(len(profileMeta[0])):
-                    profileData[prf,:,:]=np.abs(np.squeeze(plifimg.readimgav(sbf(profileMeta[0][prf]),numavg=-1,status=False)))
-                lvInfo=readlvfile2dict(labView)
-                profileValueFunction=interp1d(np.linspace(profileMeta[1][1][0],profileMeta[1][1][1],len(profileMeta[0])),profileData,axis=0,fill_value='extrapolate',bounds_error=False)
-                valueFunction=interp1d(readlvfile2dict(labView)['times'],readlvfile2dict(labView)[profileMeta[1][0]],fill_value='extrapolate',bounds_error=False)
-                timeFrame=np.linspace(0,int(np.max(readlvfile2dict(labView)['times'])))
-                #plifLength=sbf(plifFile).numimgframes()//20 #length in seconds
-                #plifTimeValues=interp1d(range(plifLength),valueFunction(range(plifLength)))
-                profileFunction=interp1d(timeFrame,profileValueFunction(valueFunction(timeFrame)),axis=0)
-                if (plifLength==None):
-                    return profileFunction
-                else:
-                    plifSpace=np.arange(0,plifLength,numAvg/10)
-                    return profileFunction(plifSpace)
+        else: #assume multiple profiles in a tuple.
+            profileData=np.zeros([len(profileMeta[0]),256,256])
+            for prf in range(len(profileMeta[0])):
+                profileData[prf,:,:]=np.abs(np.squeeze(plifimg.readimgav(sbf(profileMeta[0][prf]),numavg=-1,status=False)))
+            lvInfo=readlvfile2dict(labView)
+            profileValueFunction=interp1d(np.linspace(profileMeta[1][1][0],profileMeta[1][1][1],len(profileMeta[0])),profileData,axis=0,fill_value='extrapolate',bounds_error=False)
+            valueFunction=interp1d(readlvfile2dict(labView)['times'],readlvfile2dict(labView)[profileMeta[1][0]],fill_value='extrapolate',bounds_error=False)
+            timeFrame=np.linspace(0,int(np.max(readlvfile2dict(labView)['times'])))
+            #plifLength=sbf(plifFile).numimgframes()//20 #length in seconds
+            #plifTimeValues=interp1d(range(plifLength),valueFunction(range(plifLength)))
+            profileFunction=interp1d(timeFrame,profileValueFunction(valueFunction(timeFrame)),axis=0)
+            if (plifLength==None):
+                return profileFunction
+            else:
+                plifSpace=np.arange(0,plifLength,numAvg/10)
+                return profileFunction(plifSpace)

@@ -52,7 +52,7 @@ class CCCView(QWidget):
         self.showData=np.random.rand(256,256,256)
         self.averagedProfiles={}
         self.childViews=[]
-        self.path = './testdata/2021-03-18/'
+        self.path = './testdata/2021-04-29/'
         #self.initUI()
 
         if len(sys.argv) > 1:

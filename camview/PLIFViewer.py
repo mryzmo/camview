@@ -39,6 +39,7 @@ class PLIFView(CCCView):
         self.toFrame=-1
         self.profileMode=0
         self.profileData=None
+        self.numBg=1
 
         self.dispInvert=False
         self.dispDiff=False
@@ -111,10 +112,25 @@ class PLIFView(CCCView):
         AvgLayout.setContentsMargins(0,0,0,0)
         PLIFLayout.addWidget(AvgWidget)
 
-        LoadBgCheck=QCheckBox('Load IR background (sbf only)')
+        LoadBgCheck=QCheckBox('Raw FPA data (sbf only)')
         LoadBgCheck.setChecked(False)
-        AltBgCheck=QCheckBox('Use "other" background')
+
+        def NumBgBoxFunc(value):
+            self.numBg=value
+
+        BgBox=QWidget()
+        BgBoxLayout=QHBoxLayout(BgBox)
+        AltBgCheck=QCheckBox('Use alt. bg.')
         AltBgCheck.toggled.connect(SetAltBg)
+        BgBoxLayout.addWidget(AltBgCheck)
+        BgBoxLayout.setContentsMargins(0,0,0,0)
+        NumBgBox=QSpinBox()
+        NumBgBox.setValue(1)
+        LaserImgBox=QSpinBox()
+        LaserImgBox.setValue(0)
+        BgBoxLayout.addWidget(QLabel("Number of Bg images")) #number of bg shots
+        BgBoxLayout.addWidget(NumBgBox)
+        NumBgBox.valueChanged.connect(NumBgBoxFunc)
 
         def RangeRadioChange():
             for i,radio in enumerate(RangeRadios):
@@ -151,7 +167,7 @@ class PLIFView(CCCView):
         RangeLayout.addWidget(dashLabel)
         RangeLayout.addWidget(ToBox)
         PLIFLayout.addWidget(RangeWidget)
-        PLIFLayout.addWidget(AltBgCheck)
+        PLIFLayout.addWidget(BgBox)
         PLIFLayout.addWidget(LoadBgCheck)
         LoadBgCheck.stateChanged.connect(LoadBgCheckClicked)
 
@@ -315,23 +331,26 @@ class PLIFView(CCCView):
                 profileROI=np.mean(profile, axis=(1,2))
         data, coords = draggedROI.getArrayRegion(data=self.showData, img=self.img, axes=(1,2),returnMappedCoords=True)
         meanData=np.mean(data,axis=(1,2))
-        listItem.setText('test')
+        xROILocString='X: {:.0f}-{:.0f}'.format(np.min(coords[0]),np.max(coords[0]))
+        yROILocString='Y: {:.0f}-{:.0f}'.format(np.min(coords[1]),np.max(coords[1]))
+        listItem.setText(xROILocString+', '+yROILocString)
         dataItem.setData(self.timeAxis,invfactor*meanData/profileROI)
 
     def LoadPLIF(self):
         if self.PLIFFileName.endswith('.sif'):
             file = sif(self.PLIFFileName)
         else:
-            file = sbf(self.PLIFFileName)
-
+            file = sbf(self.PLIFFileName,numbgframes=self.numBg)
+            file.findPLIFframe()
         if self.readRaw:
-            #midimg=np.squeeze(plifimg.readimgav(file,int(file.numimgframes()/2-50),int(file.numimgframes()/2+50),95)) #read file in middle to see if it should be inverted
-            #if np.sum(midimg[100:200,100:200]) < 0:
             if self.UseAltBg:
                 startimg = 1
             else:
                 startimg = 0
-            plifdata = file.readraw(self.fromFrame,self.toFrame)[:,:,startimg::2]
+            if self.numBg==1:    
+                plifdata = file.readraw(self.fromFrame,self.toFrame)#[:,:,startimg::2]
+            else:
+                plifdata = file.readraw(self.fromFrame,self.toFrame)
         else:
             plifdata = plifimg.readimgav(file, self.fromFrame,self.toFrame, self.LoadAverage,altbg=self.UseAltBg)
         return plifdata.swapaxes(0,2).swapaxes(1,2),file
@@ -345,7 +364,7 @@ class PLIFView(CCCView):
         if self.ProfileFileName.endswith('.sif'):
             file = sif(self.ProfileFileName)
         else:
-            file = sbf(self.ProfileFileName)
+            file = sbf(self.ProfileFileName,numbgframes=self.numBg)
         if self.profileMode==0:
             self.profileData=np.squeeze(plifimg.readimgav(file,0,-1,-1)).swapaxes(1,2)
         if self.profileMode==1:
@@ -367,21 +386,24 @@ class PLIFView(CCCView):
         self.setWindowTitle('PLIF Image Viewer - '+ self.PLIFFileName.split('/')[-1])
         plifdata,file = self.LoadPLIF()
         self.showData = plifdata
-        #if self.p['PLIF', 'ProfileDivision'] and not self.p['PLIF', 'ReadRaw']:
-        #    profiledata=self.LoadProfile()
-        #    self.showData=np.true_divide(plifdata,profiledata)
-        #    self.showData[self.showData < -10] = 20
-        #    self.showData[self.showData > 20] = -10
-        starttime=self.fromFrame/self.LoadAverage
-        if self.toFrame>-1:
-            endtime=self.toFrame/self.LoadAverage
+
+        if self.readRaw:
+            starttime=self.fromFrame//(self.numBg+1)//10
+            if self.toFrame==-1:
+                endtime=(file.numimgframes(rawcount=True)-1)//(self.numBg+1)//10
+                print(file.numimgframes(True))
+            else:
+                endtime=self.toFrame//(self.numBg+1)//10
         else:
-            endtime=file.numimgframes()//20
+            starttime=self.fromFrame/10
+            if self.toFrame==-1:
+                endtime=file.numimgframes()/10
+            else:
+                endtime=self.toFrame/10
         self.timeAxis=np.linspace(starttime,endtime,np.shape(plifdata)[0])
         self.trendPlot.setXRange(starttime,endtime)
         self.trendScroll.setBounds((starttime,endtime))
         self.showData = np.swapaxes(self.showData, 2, 1)
-
         self.redrawSheet()
 
     def redrawSheet(self,sender=None):
@@ -396,12 +418,14 @@ class PLIFView(CCCView):
             endframe=self.toFrame-1
 
         if self.readRaw:
-            framenr=int(self.trendScroll.getPos()[0]*10)
+            framenr=int(self.trendScroll.getPos()[0]*(self.numBg+1)*10)-self.fromFrame
         else:
-            framenr=int(self.trendScroll.getPos()[0]/self.LoadAverage*10)
+            framenr=int(10*self.trendScroll.getPos()[0]//(self.LoadAverage))-self.fromFrame//(self.LoadAverage)
 
+        if framenr>np.shape(self.showData)[0]-1: #prevent overflow
+            framenr=np.shape(self.showData)[0]-1
         profileFactor=1
-
+        print('nr: '+str(framenr))
         if self.divProfile and not self.profileData is None and not self.readRaw:
             profileFactor=self.getProfile(framenr)
 
