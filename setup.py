@@ -9,7 +9,7 @@ setup(
   author = 'Sebastian Pfaff',                   # Type in your name
   author_email = 'sebastian.pfaff@forbrf.lth.se',      # Type in your E-Mail
   url = 'https://github.com/user/mryzmo',   # Provide either the link to your github or to your website
-  download_url = 'https://github.com/mryzmo/camview/archive/refs/tags/0.1.tar.gz',    # I explain this later on
+  download_url = 'https://github.com/mryzmo/camview/archive/refs/tags/v0.1.2-alpha.zip',    # I explain this later on
   keywords = ['Thorlabs', 'Santa Barbara Focalplane', 'PLIF'],   # Keywords that define your package best
   install_requires=[            # I get to this in a second
           'PyQt5',
@@ -29,4 +29,5 @@ setup(
     'Programming Language :: Python :: 3.5',
     'Programming Language :: Python :: 3.6',
   ],
+  scripts=['bin/plifview'],
 )
