@@ -21,9 +21,9 @@ import matplotlib.image as mpimg
 from os import listdir
 import os
 from os.path import isfile, join
-from readimg import sbf, plifimg, sif, lvsor, mptif16
-from readlvfile import readlvfile
-from ImageViewPfaff import ImageViewPfaff
+from camview.readimg import sbf, plifimg, sif, lvsor, mptif16
+from camview.readlvfile import readlvfile
+from camview.ImageViewPfaff import ImageViewPfaff
 import pickle
 import pyqtgraph.ptime as ptime
 

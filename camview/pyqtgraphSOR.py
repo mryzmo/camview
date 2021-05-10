@@ -23,12 +23,12 @@ import pyqtgraph.console
 import matplotlib.image as mpimg
 from os import listdir
 from os.path import isfile, join
-from readimg import sbf, plifimg, sif, lvsor, mptif16
-from readlvfile import readlvfile
-from ImageViewPfaff import ImageViewPfaff
+from camview.readimg import sbf, plifimg, sif, lvsor, mptif16
+from camview.readlvfile import readlvfile
+from camview.ImageViewPfaff import ImageViewPfaff
 import pickle
 import pyqtgraph.ptime as ptime
-from CCCView import CCCView
+from camview.CCCView import CCCView
 
 class SORView(CCCView):
     def __init__(self,LoadFile=None):
