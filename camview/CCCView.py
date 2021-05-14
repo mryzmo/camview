@@ -257,7 +257,7 @@ class CCCView(QWidget):
         addROIbtn=QPushButton('Add ROI')
         delROIbtn=QPushButton('Delete ROI')
         self.ROIListW=QListWidget()
-        self.ROIListW.setMaximumHeight(100)
+        #self.ROIListW.setMaximumHeight(100)
         self.ROIListW.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
         ROIGrid.addWidget(self.ROIListW,1,0,1,2)
         ROIGrid.addWidget(addROIbtn,0,0)
