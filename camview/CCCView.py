@@ -316,11 +316,16 @@ class CCCView(QWidget):
     def ROIDragged(self,draggedROI):
         """Handles dragging the ROI. Overload this in the specific class. Otherwise it will just display a trend of showData"""
         dataItem=None
+        listItem=None
         for ROI in self.ROIList:
             if ROI[1]==draggedROI:
                 dataItem=ROI[2]
+                listItem=ROI[0]
         data, coords = draggedROI.getArrayRegion(data=self.showData, img=self.img, axes=(1,2),returnMappedCoords=True) #slice the image
         dataItem.setData(self.timeAxis,np.mean(data,axis=(1,2)))  #plot the ROI trend
+        xROILocString='X: {:.0f}-{:.0f}'.format(np.min(coords[0]),np.max(coords[0]))
+        yROILocString='Y: {:.0f}-{:.0f}'.format(np.min(coords[1]),np.max(coords[1]))
+        listItem.setText(xROILocString+', '+yROILocString)
 
     def LVtimeLineChanged(self,sender):
         pos=sender.getPos()[0]
@@ -344,13 +349,12 @@ class CCCView(QWidget):
             return
         if 'SOR Files' in file[1]:
             from pyqtgraphSOR import SORView
-            childView=SORView(file[0]+'/')
+            childView=SORView(os.path.dirname(file[0])+'/')
         if 'PLIF Files (*.img *.sif)' in file[1]:
             from PLIFViewer import PLIFView
-            childView=PLIFView(file[0]+'/')
-
-        childView.show()
+            childView=PLIFView(os.path.dirname(file[0])+'/')
         childView.trendScroll.sigPositionChanged.connect(self.LVtimeLineChanged)
+        childView.show()
         self.childViews.append(childView)
 
 
@@ -453,6 +457,7 @@ class CCCView(QWidget):
             self.jumpFrames(n)
 
 #%%
+#code here is just for testing
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     app.setApplicationName('LU PLIF Viewer')

@@ -16,9 +16,9 @@ import pyqtgraph.console
 import matplotlib.image as mpimg
 from os import listdir
 from os.path import isfile, join
-from readimg import sbf, plifimg, sif
-from readlvfile import readlvfile
-from ImageViewPfaff import ImageViewPfaff
+from camview.readimg import sbf, plifimg, sif
+from camview.readlvfile import readlvfile
+from camview.ImageViewPfaff import ImageViewPfaff
 import pickle
 
 class LVView(pg.GraphicsWindow):
@@ -82,8 +82,19 @@ class LVView(pg.GraphicsWindow):
         return self.lvwin
 
 
+class LVViewApp:
+    def __init__(self):
+        import os
+        os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
+        app = QApplication(sys.argv)
+        if len(sys.argv) > 1:
+            win = LVView(sys.argv[1])
+        else:
+            win = LVView()
+        app.setApplicationName('LU PLIF Viewer')
+        #app.setWindowIcon(QIcon('PLIF-icon-256.png'))
+        # sys.exit(app.exec_())
+        app.exec_()
+
 if __name__ == '__main__':
-    app = QApplication(sys.argv)
-    win = LVView()
-    # sys.exit(app.exec_())
-    app.exec_()
+    app=LVViewApp()

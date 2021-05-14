@@ -266,13 +266,19 @@ class SORView(CCCView):
             self.img.setImage(invfactor/profileFactor*self.showData[framenr, :, :],autoLevels=False)
 
 #%%
+class SORViewApp:
+    def __init__(self):
+        import os
+        os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
+        app = QApplication(sys.argv)
+        app.setApplicationName('LU SOR Viewer')
+        app.setWindowIcon(QIcon('PLIF-icon-256.png'))
+        plifv = SORView()
+        # sys.exit(app.exec_())
+        app.exec_()
+
 if __name__ == '__main__':
-    app = QApplication(sys.argv)
-    app.setApplicationName('LU PLIF Viewer')
-    app.setWindowIcon(QIcon('PLIF-icon-256.png'))
-    plifv = SORView()
-    # sys.exit(app.exec_())
-    app.exec_()
+    app=SORViewApp()
 
 
 # https://stackoverflow.com/questions/12459811/how-to-embed-matplotlib-in-pyqt-for-dummies

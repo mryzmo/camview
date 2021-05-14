@@ -1,0 +1,4 @@
+#!/usr/bin/env python3
+
+from camview.lvtxtview import LVViewApp
+app=LVViewApp()

@@ -1,0 +1,4 @@
+#!/usr/bin/env python3
+
+from camview.pyqtgraphSOR import SORViewApp
+app=SORViewApp()

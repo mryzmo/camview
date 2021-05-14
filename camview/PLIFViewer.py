@@ -441,15 +441,18 @@ class PLIFView(CCCView):
         else:
             self.img.setImage(invfactor/profileFactor*self.showData[framenr, :, :],autoLevels=sender is not None)
 
-#%%
+class PLIFViewApp:
+    def __init__(self):
+        os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
+        app = QApplication(sys.argv)
+        app.setApplicationName('LU PLIF Viewer')
+        app.setWindowIcon(QIcon('PLIF-icon-256.png'))
+        plifv = PLIFView()
+        # sys.exit(app.exec_())
+        app.exec_()
+
 if __name__ == '__main__':
-    os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
-    app = QApplication(sys.argv)
-    app.setApplicationName('LU PLIF Viewer')
-    app.setWindowIcon(QIcon('PLIF-icon-256.png'))
-    plifv = PLIFView()
-    # sys.exit(app.exec_())
-    app.exec_()
+    app=PLIFViewApp()
 
 
 # https://stackoverflow.com/questions/12459811/how-to-embed-matplotlib-in-pyqt-for-dummies
