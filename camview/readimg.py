@@ -5,6 +5,7 @@ from scanf import scanf
 import time
 import os.path
 #from readimg import sbf, plifimg
+from camview.winspec import SpeFile
 
 class imformat:
     """Function skeleton for image reader class
@@ -586,3 +587,82 @@ class plifimg:
             else:
                 plifSpace=np.arange(0,plifLength,numAvg/10)
                 return profileFunction(plifSpace)
+
+class spe(SpeFile):
+
+    def __init__(self, filename):
+        super().__init__(filename)
+        self.f=open(filename,'rb')
+
+    def imageType(self):
+        return 'SPE'
+
+    def getimgdata(self): #returns width,height
+        return(self.header.xdim,self.header.ydim)
+
+    def numimgframes(self):
+        return(self.header.NumFrames)
+
+    def readimg(self,startimg=0,stopimg=1):
+        width=self.getimgdata()[0]
+        height=self.getimgdata()[1]
+        if startimg > self.numimgframes():
+            return np.zeros(self.getimgdata(),dtype='uint16')
+        if stopimg > self.numimgframes():
+            stopimg=stopimg=self.numimgframes()
+        f=self.f
+        if stopimg<0:
+            stopimg=self.numimgframes()
+        #header is 16 words aka 32 bytes
+        f.seek(4100+height*width*2*startimg,0)
+        rs=np.zeros((height,width,stopimg-startimg),dtype='uint16')
+        for i in range(stopimg-startimg):
+            image=f.read(height*width*2)
+            imdb=np.frombuffer(image,dtype='uint16')
+            rs[:,:,i]= np.fliplr(np.rot90(np.reshape(imdb,(height,width)),k = -2))
+        #f.close()
+        return rs
+
+class speMany:
+    def __init__(self, filename,fromFrame,toFrame,LoadAverage):
+        self.file = filename
+        self.data = []
+        self.len = 0 
+        self.fromFrame = fromFrame
+        self.toFrame = toFrame
+        self.LoadAverage = LoadAverage
+        for fname in os.listdir(self.file):
+            if fname.endswith(".SPE"):
+                self.xdim = spe(os.path.join(self.file,fname)).getimgdata()[0] 
+                self.ydim = spe(os.path.join(self.file,fname)).getimgdata()[1] 
+                self.len += spe(os.path.join(self.file,fname)).numimgframes()
+        # self.data = self.data.reshape((self.xdim,self.ydim,len(self.data)))
+ 
+          
+    def imageType(self):
+        return 'SPE'
+
+    def getimgdata(self): #returns width,height
+        return(self.xdim,self.ydim)
+
+    def numimgframes(self):
+        return(self.len)
+
+    def readimg(self,startimg=0,stopimg=1):
+        data = np.zeros((self.len,self.xdim,self.ydim))
+        temp = 0
+        j = 0
+        for fname in os.listdir(self.file):
+            if fname.endswith(".SPE"):
+                file = spe(os.path.join(self.file,fname))
+                temp = plifimg.readimgav(file,self.fromFrame,self.toFrame,self.LoadAverage).swapaxes(0,2).swapaxes(1,2)
+                i = 0
+                for i in range(temp.shape[0]):
+                    data[j,:,:] = temp[i,:,:]
+                    j += 1
+                    i += 1
+        
+        return data
+
+        # return self.data.reshape((self.xdim,self.ydim,len(self.data)))
+
