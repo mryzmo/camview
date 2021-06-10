@@ -37,6 +37,7 @@ class SORView(CCCView):
         self.PLIFFileName=''
         self.fromFrame=0
         self.toFrame=-1
+        self.LoadFps=10
 
         self.divData=1
         self.dispInvert=False
@@ -99,6 +100,9 @@ class SORView(CCCView):
 
         def SetAvg(value):
             self.LoadAverage=value
+        
+        def SetFps(value):
+            self.LoadFps=value
 
         AvgWidget=QWidget()
         AvgBox=QSpinBox()
@@ -111,6 +115,17 @@ class SORView(CCCView):
         AvgLayout.addWidget(QLabel('frames'))
         AvgLayout.setContentsMargins(0,0,0,0)
         PLIFLayout.addWidget(AvgWidget)
+
+        FpsWidget=QWidget()
+        FpsBox=QSpinBox()
+        FpsBox.setRange(1,400)
+        FpsBox.valueChanged.connect(SetFps)
+        FpsLayout=QHBoxLayout(FpsWidget)
+        FpsLayout.addWidget(QLabel('Footage is'))
+        FpsLayout.addWidget(FpsBox)
+        FpsLayout.addWidget(QLabel('fps'))
+        FpsLayout.setContentsMargins(0,0,0,0)
+        PLIFLayout.addWidget(FpsWidget)
 
         LoadBgCheck=QCheckBox('Load IR background (sbf only)')
         LoadBgCheck.setChecked(False)
@@ -225,9 +240,9 @@ class SORView(CCCView):
         #    self.showData=np.true_divide(plifdata,profiledata)
         #    self.showData[self.showData < -10] = 20
         #    self.showData[self.showData > 20] = -10
-        starttime=self.fromFrame/self.LoadAverage
+        starttime=self.fromFrame/self.LoadAverage/self.LoadFps
         if self.toFrame>-1:
-            endtime=self.toFrame/self.LoadAverage
+            endtime=self.toFrame/self.LoadAverage/self.LoadFps#-(1/self.LoadAverage*self.LoadFps)
         else:
             endtime=file.numimgframes()//10
         self.timeAxis=np.linspace(starttime,endtime,np.shape(plifdata)[0])
@@ -248,20 +263,17 @@ class SORView(CCCView):
         else:
             endframe=self.toFrame-1
 
-        if self.readRaw:
-            framenr=int(self.trendScroll.getPos()[0]*10)-1
-        else:
-            framenr=int(self.trendScroll.getPos()[0]/self.LoadAverage*10)-1
-
+        framenr=int(self.trendScroll.getPos()[0]/self.LoadAverage*self.LoadFps)-self.fromFrame
+        print(framenr)
         profileFactor=1
 
-        if self.divProfile and not self.divData is 1:
+        if self.divProfile and not self.divData == 1:
             profileFactor=self.divData
 
         if self.dispDiff:
             if framenr==0:
                 framenr=1
-            self.img.setImage(invfactor/profileFactor*(self.showData[framenr, :, :]-self.showData[framenr-1, :, :]),autoLevels=False)
+            self.img.setImage(invfactor/profileFactor*(self.showData[framenr, :, :]-self.showData[framenr-1, :, :].astype(np.intc)),autoLevels=False)
         else:
             self.img.setImage(invfactor/profileFactor*self.showData[framenr, :, :],autoLevels=False)
 
