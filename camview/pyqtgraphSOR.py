@@ -23,7 +23,7 @@ import pyqtgraph.console
 import matplotlib.image as mpimg
 from os import listdir
 from os.path import isfile, join
-from camview.readimg import sbf, plifimg, sif, lvsor, mptif16
+from camview.readimg import sbf, plifimg, sif, lvsor, mptif16, spe
 from camview.readlvfile import readlvfile
 from camview.ImageViewPfaff import ImageViewPfaff
 import pickle
@@ -222,6 +222,8 @@ class SORView(CCCView):
         plifdata=None
         if self.PLIFFileName.endswith('.sif'):
             file = sif(self.PLIFFileName)
+        if self.PLIFFileName.endswith('.SPE') or self.PLIFFileName.endswith('.spe'):
+            file = spe(self.PLIFFileName)
         if self.PLIFFileName.endswith('.tif'):
             file = mptif16(self.PLIFFileName)
         else:
@@ -267,7 +269,7 @@ class SORView(CCCView):
         print(framenr)
         profileFactor=1
 
-        if self.divProfile and not self.divData == 1:
+        if self.divProfile and self.divData != 1:
             profileFactor=self.divData
 
         if self.dispDiff:
