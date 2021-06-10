@@ -458,7 +458,7 @@ class sbf:
         #f.close()
         return rs
     
-    def readimg(self,startimg=0,stopimg=-1,altbg=False):
+    def readimg(self,startimg=0,stopimg=-1,altbg=False,raw=False):
         """Reads the SBF format images
 
         Args:
@@ -471,6 +471,9 @@ class sbf:
         Returns:
             numpy array: Array with all the images. Axis order is (x,y,t)
         """
+        if raw:
+            return self.readraw(startimg,stopimg)
+
         cycleframes=self.numbgframes+1 #number of frames in 100 ms, usually 2 unless hifps on IR camera
         skipframes=cycleframes-2 #background frames to skip 
         #initialskip = plifframe%cycleframes #make sure the skip is periodic
