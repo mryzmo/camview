@@ -523,15 +523,19 @@ class plifimg:
         Returns:
             numpy array: Array with all the images. Axis order is (x,y,t)
         """
+        if 'raw' in kwargs:
+            numframes=img.numimgframes(rawcount=kwargs.get("raw"))
+        else:
+            numframes=img.numimgframes()
         if stopimg<0 or \
-         (img.imageType()=='SBF' and stopimg>img.numimgframes()//2) or \
-         stopimg>img.numimgframes():  #if -1, read to end
-            stopimg=img.numimgframes()
+         (img.imageType()=='SBF' and stopimg>numframes//2) or \
+         stopimg>numframes:  #if -1, read to end
+            stopimg=numframes
         if numavg==1 and not forcefunc: #1 average one = no average
             rs=img.readimg(startimg,stopimg,**kwargs)
             return rs
         if numavg==-1: #if -1, average all
-            numavg=img.numimgframes()
+            numavg=numframes
         imageDims=img.getimgdata()
         if img.imageType()=='AndorSIF' or img.imageType()=='LVSor':
             rs=np.zeros((imageDims[1],imageDims[0],(stopimg-startimg)//numavg),dtype='float64')
