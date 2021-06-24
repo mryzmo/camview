@@ -116,6 +116,32 @@ def readmaestrofile(filename):
     return (energies)
 
 
+def lvSummary(filenames,o2flow=1,coflow=2,coconc=0.1,kelvin=True):
+    from camview.readlvfile3 import readlvfile2dict as rlv
+    from IPython.display import HTML, display
+    import tabulate
+    import numpy as np
+
+    table=[]
+    headerRow=['Filename','Start time','Temperature Range','Current Range','Pressure','O<sub>2</sub> Partial', 'CO Partial','O<sub>2</sub>:CO Ratio']
+    table.append(headerRow)
+    for file in filenames:
+        lvData=rlv(file)
+        totalPressure=(lvData['pressures'][0][1]+lvData['pressures'][0][3]*1000)/2
+        totalFlow=np.round(np.sum(lvData['flows'][0]),1)
+        o2Partial=np.round(lvData['flows'][0][o2flow]/totalFlow*totalPressure,2)
+        coPartial=np.round(lvData['flows'][0][coflow]*coconc/totalFlow*totalPressure,2)
+        templine='{:.1f} °C - {:.1f} °C'.format(np.min(lvData['temps'][0:int(len(lvData['temps'])/2)]*1.33+26),np.max(lvData['temps'][0:int(len(lvData['temps'])/2)]*1.33+26))
+        if kelvin:
+            templine='{:.1f} K - {:.1f} K'.format(np.min(lvData['temps'][0:int(len(lvData['temps'])/2)]*1.33+26+273),np.max(lvData['temps'][0:int(len(lvData['temps'])/2)]*1.33+26+273))
+        dataRow=[file,lvData['timeline'],\
+                 templine,\
+                 '{} mA - {} mA'.format(1000*np.min(lvData['currents'][0:int(len(lvData['currents'])/2)]),1000*np.max(lvData['currents'][0:int(len(lvData['currents'])/2)])),'{} mbar'.format(totalPressure),\
+                 '{} mbar'.format(o2Partial),'{} mbar'.format(coPartial),'{:.0f}:1'.format(np.round(o2Partial/coPartial))]
+        table.append(dataRow)
+    display(HTML(tabulate.tabulate(table, tablefmt='unsafehtml',headers="firstrow")))
+
+
 def readlvfile2dict(filename):
     lvfile = open(filename)
     lvlines=lvfile.readlines()
